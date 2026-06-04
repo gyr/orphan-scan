@@ -65,6 +65,7 @@ MAINTAINERSHIP_JSON=$(git archive --remote=ssh://gitea@src.suse.de/products/SLFO
 
 # check if new sources has a maintainer in maintainership json
 # exit 0 = clean, exit 1 = script error (set -e), exit 2 = orphans found
+mapfile -t SOURCES_ARR <<< "${SOURCES}"
 ORPHAN_REPORT=$(jq -rn '
     input as $db |
     $ARGS.positional[] as $pkg |
@@ -73,7 +74,7 @@ ORPHAN_REPORT=$(jq -rn '
     else
         "-- ORPHANED: \($pkg)"
     end
-' --args ${SOURCES} <<< "${MAINTAINERSHIP_JSON}")
+' --args "${SOURCES_ARR[@]}" <<< "${MAINTAINERSHIP_JSON}")
 
 if [[ -n "${ORPHAN_REPORT}" ]]; then
     printf '%s\n' "${ORPHAN_REPORT}"
