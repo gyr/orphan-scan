@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+set -euo pipefail
 
 TMP_DIR=$(mktemp -d)
 PRODUCTCOMPOSE_FILE="000productcompose/default.productcompose"
