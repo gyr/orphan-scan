@@ -64,7 +64,8 @@ debug "FAILED BINARIES (No source found):\\n${FAILED_BINARIES}"
 MAINTAINERSHIP_JSON=$(git archive --remote=ssh://gitea@src.suse.de/products/SLFO.git slfo-main _maintainership.json | tar -xO)
 
 # check if new sources has a maintainer in maintainership json
-jq -rn '
+# exit 0 = clean, exit 1 = script error (set -e), exit 2 = orphans found
+ORPHAN_REPORT=$(jq -rn '
     input as $db |
     $ARGS.positional[] as $pkg |
     if ($db.packages[$pkg] | . != null and ((.users | . != null and length > 0) or (.groups | . != null and length > 0))) then
@@ -72,4 +73,9 @@ jq -rn '
     else
         "-- ORPHANED: \($pkg)"
     end
-' --args ${SOURCES} <<< "${MAINTAINERSHIP_JSON}"
+' --args ${SOURCES} <<< "${MAINTAINERSHIP_JSON}")
+
+if [[ -n "${ORPHAN_REPORT}" ]]; then
+    printf '%s\n' "${ORPHAN_REPORT}"
+    exit 2
+fi
