@@ -19,7 +19,9 @@ if ! git rev-parse --is-inside-work-tree >/dev/null 2>&1 || [ ! -f "${PRODUCTCOM
 fi
 
 # retrieve the lastet binaries added
-GIT_DIFF=$(git show $(git log -1 --format="%H" -- ${PRODUCTCOMPOSE_FILE}) -- ${PRODUCTCOMPOSE_FILE})
+LAST_SHA=$(git log -1 --format="%H" -- "${PRODUCTCOMPOSE_FILE}")
+[[ -n "${LAST_SHA}" ]] || { printf -- 'ERROR: no commits touch %s\n' "${PRODUCTCOMPOSE_FILE}" >&2; exit 1; }
+GIT_DIFF=$(git show "${LAST_SHA}" -- "${PRODUCTCOMPOSE_FILE}")
 BINARIES=$(awk '/^\+ / && !/#-/ { $1=$1; print $3 }' <<< "${GIT_DIFF}" | sort -u)
 # START: override for test purpose
 BINARIES="${BINARIES}
