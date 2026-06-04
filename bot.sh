@@ -23,15 +23,15 @@ LAST_SHA=$(git log -1 --format="%H" -- "${PRODUCTCOMPOSE_FILE}")
 [[ -n "${LAST_SHA}" ]] || { printf -- 'ERROR: no commits touch %s\n' "${PRODUCTCOMPOSE_FILE}" >&2; exit 1; }
 GIT_DIFF=$(git show "${LAST_SHA}" -- "${PRODUCTCOMPOSE_FILE}")
 BINARIES=$(awk '/^\+[[:space:]]+-[[:space:]]+[A-Za-z0-9]/ { print $3 }' <<< "${GIT_DIFF}" | sort -u)
-# START: override for test purpose
-BINARIES="${BINARIES}
+if [[ -n "${BOT_TEST_FIXTURES:-}" ]]; then
+    BINARIES="${BINARIES}
 cargo1.94
 cargo1.81
 graphviz
 graphviz-devel
 graphviz-plugins-core
 foobar"
-# END: override for test purpose
+fi
 debug "NEW BINARIES:\\n${BINARIES}"
 
 # find the source packages (-P4 to avoid hammering the IBS API)
@@ -51,12 +51,12 @@ RESULTS=$(printf '%s\n' "${BINARIES}" | grep -v '^$' | xargs -P4 -I{} bash -c '
 # Extract variables from results
 SOURCES=$(awk -F':' '/^SRC:/ { print $2 }' <<< "${RESULTS}" | sort -u)
 FAILED_BINARIES=$(awk -F':' '/^FAIL:/ { print $2 }' <<< "${RESULTS}" | sort -u)
-# START: override for test purpose
-SOURCES="${SOURCES}
+if [[ -n "${BOT_TEST_FIXTURES:-}" ]]; then
+    SOURCES="${SOURCES}
 kernel-default
 patterns-containers
 patterns-container"
-# END: override for test purpose
+fi
 printf -- "-- NEW SOURCES:\n%s\n" "${SOURCES}"
 debug "FAILED BINARIES (No source found):\n${FAILED_BINARIES}"
 
