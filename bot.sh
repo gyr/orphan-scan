@@ -34,17 +34,19 @@ foobar"
 # END: override for test purpose
 debug "NEW BINARIES:\\n${BINARIES}"
 
-# find the source packages
-RESULTS=$(while read -r binary; do
-    [ -z "$binary" ] && continue
-    source_pkg=$(osc -A https://api.suse.de bse -B "${IBS_BUILD_PROJECT}" --csv "${binary}" | awk -F'|' -v project="${IBS_BUILD_PROJECT}" '$1 == project { print $2 }')
-    
-    if [ -n "$source_pkg" ]; then
+# find the source packages (-P4 to avoid hammering the IBS API)
+export IBS_BUILD_PROJECT
+# shellcheck disable=SC2016
+RESULTS=$(printf '%s\n' "${BINARIES}" | grep -v '^$' | xargs -P4 -I{} bash -c '
+    binary="$1"
+    source_pkg=$(osc -A https://api.suse.de bse -B "${IBS_BUILD_PROJECT}" --csv "${binary}" \
+        | awk -F"|" -v project="${IBS_BUILD_PROJECT}" "\$1 == project { print \$2 }")
+    if [[ -n "${source_pkg}" ]]; then
         echo "SRC:${source_pkg}"
     else
         echo "FAIL:${binary}"
     fi
-done <<< "${BINARIES}")
+' _ {})
 
 # Extract variables from results
 SOURCES=$(awk -F':' '/^SRC:/ { print $2 }' <<< "${RESULTS}" | sort -u)
