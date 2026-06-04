@@ -57,8 +57,8 @@ kernel-default
 patterns-containers
 patterns-container"
 fi
-printf -- "-- NEW SOURCES:\n%s\n" "${SOURCES}"
-debug "FAILED BINARIES (No source found):\n${FAILED_BINARIES}"
+debug "NEW SOURCES:\\n${SOURCES}"
+debug "FAILED BINARIES (No source found):\\n${FAILED_BINARIES}"
 
 # retrieve maintainership json
 MAINTAINERSHIP_JSON=$(git archive --remote=ssh://gitea@src.suse.de/products/SLFO.git slfo-main _maintainership.json | tar -xO)
