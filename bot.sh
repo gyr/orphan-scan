@@ -14,9 +14,8 @@ debug() {
 
 # clone SLES repo if not inside a git repository or productcompose file does not exist
 if ! git rev-parse --is-inside-work-tree >/dev/null 2>&1 || [ ! -f "${PRODUCTCOMPOSE_FILE}" ]; then
-    cd "${TMP_DIR}"
-    git clone gitea@src.suse.de:products/SLES.git
-    pushd "${TMP_DIR}/SLES"
+    git clone gitea@src.suse.de:products/SLES.git "${TMP_DIR}/SLES"
+    cd "${TMP_DIR}/SLES"
 fi
 
 # retrieve the lastet binaries added
