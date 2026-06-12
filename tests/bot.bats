@@ -84,6 +84,30 @@ teardown() {
     [[ "${output}" =~ \[DEBUG\] ]]
 }
 
+@test "--output json produces valid JSON on stdout" {
+    create_fake_workspace
+    install_git_mock
+    install_osc_mock
+    install_jq_passthrough
+    # Run and capture only stdout (no 2>&1) — json goes to stdout
+    run bash -c "cd '${WORKSPACE}' && '${REPO_ROOT}/bot.sh' --output json 2>/dev/null"
+    [ "${status}" -eq 0 ] || [ "${status}" -eq 2 ]
+    # stdout must be valid JSON
+    printf '%s' "${output}" | /usr/bin/jq -e . >/dev/null
+}
+
+@test "--output text (default) still emits orphan lines on stdout" {
+    create_fake_workspace
+    install_jq_passthrough
+    # git mock that returns an orphaned source (maintainership db is empty)
+    install_git_mock
+    install_osc_mock
+    # Run in text mode (default); orphans should appear on stdout
+    run bash -c "cd '${WORKSPACE}' && '${REPO_ROOT}/bot.sh' 2>/dev/null"
+    # BOT_TEST_FIXTURES is set (setup_mocks) so orphans will exist
+    [[ "${output}" =~ "-- ORPHANED:" ]]
+}
+
 @test "empty SOURCES (all binaries unresolvable) exits 0, not 2" {
     create_fake_workspace
     # git mock: show returns a diff line that produces a binary, but osc always fails to resolve it

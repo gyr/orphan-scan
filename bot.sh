@@ -5,6 +5,7 @@ VERSION="1.0.0"
 TMP_DIR=$(mktemp -d)
 PRODUCTCOMPOSE_FILE="${BOT_FILE:-000productcompose/default.productcompose}"
 IBS_BUILD_PROJECT="${BOT_PROJECT:-SUSE:SLFO:Main}"
+BOT_OUTPUT="${BOT_OUTPUT:-text}"
 
 # LOG_LEVEL: 0=quiet 1=info(default) 2=debug
 LOG_LEVEL=1
@@ -72,6 +73,10 @@ parse_args() {
                 PRODUCTCOMPOSE_FILE="${2:?--file requires a value}"
                 shift 2
                 ;;
+            --output)
+                BOT_OUTPUT="${2:?--output requires a value}"
+                shift 2
+                ;;
             *)
                 printf '%s [ERROR] unknown option: %s\n' "$(_ts)" "$1" >&2
                 usage >&2
@@ -89,6 +94,29 @@ log_info()  { (( LOG_LEVEL >= 1 )) && printf '%s [INFO]  %s\n' "$(_ts)" "$*" >&2
 log_warn()  { printf '%s [WARN]  %s\n' "$(_ts)" "$*" >&2; }
 log_error() { printf '%s [ERROR] %s\n' "$(_ts)" "$*" >&2; }
 log_debug() { (( LOG_LEVEL >= 2 )) && printf '%s [DEBUG] %s\n' "$(_ts)" "$*" >&2 || return 0; }
+
+# ─── Output ────────────────────────────────────────────────────────────────────
+
+# emit_report <orphans_newline_separated> <checked_count> <failed_binaries_newline_separated>
+emit_report() {
+    local orphans="$1"
+    local checked="$2"
+    local failed="$3"
+
+    if [[ "${BOT_OUTPUT}" == "json" ]]; then
+        local orphan_json failed_json
+        orphan_json=$(printf '%s\n' "${orphans}" | awk 'NF' \
+            | jq -Rn '[inputs]')
+        failed_json=$(printf '%s\n' "${failed}" | awk 'NF' \
+            | jq -Rn '[inputs]')
+        printf '{"orphans":%s,"checked":%s,"failed_binaries":%s}\n' \
+            "${orphan_json}" "${checked}" "${failed_json}"
+    else
+        if [[ -n "${orphans}" ]]; then
+            printf '%s\n' "${orphans}"
+        fi
+    fi
+}
 
 # ─── Pipeline ──────────────────────────────────────────────────────────────────
 
@@ -194,8 +222,9 @@ main() {
     local orphan_report
     orphan_report=$(find_orphans "${SOURCES}" "${maintainership_json}")
 
+    emit_report "${orphan_report}" "${source_count}" "${FAILED_BINARIES:-}"
+
     if [[ -n "${orphan_report}" ]]; then
-        printf '%s\n' "${orphan_report}"
         exit 2
     fi
 
