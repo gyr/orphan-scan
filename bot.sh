@@ -82,8 +82,14 @@ fetch_maintainership() {
 find_orphans() {
     local sources="$1"
     local maintainership_json="$2"
+
+    if [[ -z "${sources//[[:space:]]/}" ]]; then
+        log_info "no new sources to check — nothing to do"
+        return 0
+    fi
+
     local sources_arr
-    mapfile -t sources_arr <<< "${sources}"
+    mapfile -t sources_arr < <(printf '%s\n' "${sources}" | awk 'NF')
     jq -rn '
         input as $db |
         $ARGS.positional[] as $pkg |
@@ -108,7 +114,9 @@ main() {
     local maintainership_json
     maintainership_json=$(fetch_maintainership)
 
-    log_info "checking $(printf '%s\n' "${SOURCES}" | grep -c .) source(s) against maintainership db"
+    local source_count
+    source_count=$(printf '%s\n' "${SOURCES}" | awk 'NF' | wc -l | tr -d ' ')
+    log_info "checking ${source_count} source(s) against maintainership db"
 
     # exit 0 = clean, exit 1 = script error (set -e), exit 2 = orphans found
     local orphan_report

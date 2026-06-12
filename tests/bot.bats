@@ -26,3 +26,17 @@ teardown() {
     run bash -c "cd '${WORKSPACE}' && '${REPO_ROOT}/bot.sh'" 2>&1
     [[ "${output}" =~ \[INFO\] ]]
 }
+
+@test "empty SOURCES (all binaries unresolvable) exits 0, not 2" {
+    create_fake_workspace
+    # git mock: show returns a diff line that produces a binary, but osc always fails to resolve it
+    install_git_mock
+    install_jq_passthrough
+    # osc mock that always fails to resolve (returns nothing)
+    install_mock osc 'echo ""'
+    # BOT_TEST_FIXTURES adds extra binaries/sources — disable it so SOURCES stays empty
+    run bash -c "cd '${WORKSPACE}' && BOT_TEST_FIXTURES= '${REPO_ROOT}/bot.sh'" 2>&1
+    [ "${status}" -eq 0 ]
+    # stdout must be empty (no orphan lines)
+    [[ -z "$(bash -c "cd '${WORKSPACE}' && BOT_TEST_FIXTURES= '${REPO_ROOT}/bot.sh' 2>/dev/null")" ]]
+}
