@@ -27,6 +27,24 @@ teardown() {
     [[ "${output}" =~ \[INFO\] ]]
 }
 
+@test "--help exits 0 and prints usage to stdout" {
+    run "${REPO_ROOT}/bot.sh" --help
+    [ "${status}" -eq 0 ]
+    [[ "${output}" =~ "Usage:" ]]
+}
+
+@test "--version exits 0 and prints version string" {
+    run "${REPO_ROOT}/bot.sh" --version
+    [ "${status}" -eq 0 ]
+    [[ "${output}" =~ [0-9]+\.[0-9]+\.[0-9]+ ]]
+}
+
+@test "unknown flag exits 64 with usage on stderr" {
+    run "${REPO_ROOT}/bot.sh" --bogus-flag
+    [ "${status}" -eq 64 ]
+    [[ "${output}" =~ "Usage:" ]]
+}
+
 @test "empty SOURCES (all binaries unresolvable) exits 0, not 2" {
     create_fake_workspace
     # git mock: show returns a diff line that produces a binary, but osc always fails to resolve it

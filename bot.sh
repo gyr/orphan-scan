@@ -1,18 +1,73 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+VERSION="1.0.0"
 TMP_DIR=$(mktemp -d)
-PRODUCTCOMPOSE_FILE="000productcompose/default.productcompose"
-IBS_BUILD_PROJECT="SUSE:SLFO:Main"
+PRODUCTCOMPOSE_FILE="${BOT_FILE:-000productcompose/default.productcompose}"
+IBS_BUILD_PROJECT="${BOT_PROJECT:-SUSE:SLFO:Main}"
 
 # LOG_LEVEL: 0=quiet 1=info(default) 2=debug
 LOG_LEVEL=1
 
 trap 'rm -rf "${TMP_DIR}"' EXIT
 
+# ─── Constants ─────────────────────────────────────────────────────────────────
+
+EXIT_OK=0
+EXIT_USAGE=64
+
+# ─── Args ──────────────────────────────────────────────────────────────────────
+
+usage() {
+    cat <<EOF
+Usage: bot.sh [OPTIONS]
+
+Detect orphaned source packages newly added to the SLES product compose.
+
+Options:
+  -h, --help            Show this help and exit
+  -V, --version         Print version and exit
+  -q, --quiet           Suppress INFO logs (errors still shown)
+  -v, --verbose         Enable DEBUG logs
+      --project NAME    IBS build project  [env: BOT_PROJECT, default: SUSE:SLFO:Main]
+      --file PATH       productcompose path [env: BOT_FILE, default: 000productcompose/default.productcompose]
+      --output FORMAT   Output format: text (default) or json  [env: BOT_OUTPUT]
+      --timeout SECS    Network timeout per attempt [env: BOT_TIMEOUT, default: 30]
+      --retries N       Retry count for network calls [env: BOT_RETRIES, default: 3]
+
+Exit codes:
+  0   Clean — no orphans
+  1   Internal error
+  2   Orphans found
+  64  Bad usage (EX_USAGE)
+  69  Preflight failed: missing dep or auth (EX_UNAVAILABLE)
+  124 Network call timed out after all retries
+EOF
+}
+
+parse_args() {
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            -h|--help)
+                usage
+                exit "${EXIT_OK}"
+                ;;
+            -V|--version)
+                printf '%s\n' "${VERSION}"
+                exit "${EXIT_OK}"
+                ;;
+            *)
+                printf '%s [ERROR] unknown option: %s\n' "$(_ts)" "$1" >&2
+                usage >&2
+                exit "${EXIT_USAGE}"
+                ;;
+        esac
+    done
+}
+
 # ─── Logging ───────────────────────────────────────────────────────────────────
 
-_ts() { date -u +"%Y-%m-%dT%H:%M:%SZ"; }
+_ts() { date -u +"%Y-%m-%dT%H:%M:%SZ" 2>/dev/null || printf 'unknown-time'; }
 
 log_info()  { (( LOG_LEVEL >= 1 )) && printf '%s [INFO]  %s\n' "$(_ts)" "$*" >&2 || return 0; }
 log_warn()  { printf '%s [WARN]  %s\n' "$(_ts)" "$*" >&2; }
@@ -104,6 +159,7 @@ find_orphans() {
 # ─── Main ──────────────────────────────────────────────────────────────────────
 
 main() {
+    parse_args "$@"
     resolve_workdir
 
     local binaries
