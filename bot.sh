@@ -209,7 +209,7 @@ graphviz-devel
 graphviz-plugins-core
 foobar"
     fi
-    log_debug "NEW BINARIES:\\n${binaries}"
+    log_debug "NEW BINARIES:"$'\n'"${binaries}"
     printf '%s' "${binaries}"
 }
 
@@ -232,9 +232,9 @@ resolve_sources() {
             source_pkg=$(awk -F"|" -v project="${IBS_BUILD_PROJECT}" \
                 "\$1 == project { print \$2 }" <<< "${osc_out}")
             if [[ -n "${source_pkg}" ]]; then
-                echo "SRC:${source_pkg}"
+                printf "SRC:%s\n" "${source_pkg}"
             else
-                echo "FAIL:${binary}"
+                printf "FAIL:%s\n" "${binary}"
             fi
         ' _ {} >> "${results_file}" || xargs_rc=$?
 
@@ -254,8 +254,8 @@ kernel-default
 patterns-containers
 patterns-container"
     fi
-    log_debug "NEW SOURCES:\\n${SOURCES}"
-    log_debug "FAILED BINARIES (No source found):\\n${FAILED_BINARIES}"
+    log_debug "NEW SOURCES:"$'\n'"${SOURCES}"
+    log_debug "FAILED BINARIES (No source found):"$'\n'"${FAILED_BINARIES}"
 }
 
 fetch_maintainership() {
