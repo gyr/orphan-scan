@@ -45,6 +45,29 @@ teardown() {
     [[ "${output}" =~ "Usage:" ]]
 }
 
+@test "--project override is passed to osc invocation" {
+    create_fake_workspace
+    install_git_mock
+    install_jq_passthrough
+    # osc mock that echoes the project argument so we can assert it
+    install_mock osc 'echo "CUSTOM_PROJECT|src-pkg|x86_64|standard"'
+    # also install an osc that records its args
+    local capture_file="${MOCK_DIR}/osc_args"
+    install_mock osc "echo \"\$@\" >> '${capture_file}'; echo 'CUSTOM_PROJECT|src-pkg|x86_64|standard'"
+    run bash -c "cd '${WORKSPACE}' && BOT_TEST_FIXTURES= '${REPO_ROOT}/bot.sh' --project CUSTOM_PROJECT" 2>&1
+    grep -q 'CUSTOM_PROJECT' "${capture_file}"
+}
+
+@test "BOT_PROJECT env var sets the project" {
+    create_fake_workspace
+    install_git_mock
+    install_jq_passthrough
+    local capture_file="${MOCK_DIR}/osc_args"
+    install_mock osc "echo \"\$@\" >> '${capture_file}'; echo 'ENV_PROJECT|src-pkg|x86_64|standard'"
+    run bash -c "cd '${WORKSPACE}' && BOT_TEST_FIXTURES= BOT_PROJECT=ENV_PROJECT '${REPO_ROOT}/bot.sh'" 2>&1
+    grep -q 'ENV_PROJECT' "${capture_file}"
+}
+
 @test "empty SOURCES (all binaries unresolvable) exits 0, not 2" {
     create_fake_workspace
     # git mock: show returns a diff line that produces a binary, but osc always fails to resolve it

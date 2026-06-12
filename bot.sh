@@ -56,6 +56,14 @@ parse_args() {
                 printf '%s\n' "${VERSION}"
                 exit "${EXIT_OK}"
                 ;;
+            --project)
+                IBS_BUILD_PROJECT="${2:?--project requires a value}"
+                shift 2
+                ;;
+            --file)
+                PRODUCTCOMPOSE_FILE="${2:?--file requires a value}"
+                shift 2
+                ;;
             *)
                 printf '%s [ERROR] unknown option: %s\n' "$(_ts)" "$1" >&2
                 usage >&2
