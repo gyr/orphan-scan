@@ -56,6 +56,14 @@ parse_args() {
                 printf '%s\n' "${VERSION}"
                 exit "${EXIT_OK}"
                 ;;
+            -q|--quiet)
+                LOG_LEVEL=0
+                shift
+                ;;
+            -v|--verbose)
+                LOG_LEVEL=2
+                shift
+                ;;
             --project)
                 IBS_BUILD_PROJECT="${2:?--project requires a value}"
                 shift 2

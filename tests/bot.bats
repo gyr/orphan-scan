@@ -68,6 +68,22 @@ teardown() {
     grep -q 'ENV_PROJECT' "${capture_file}"
 }
 
+@test "--quiet suppresses INFO but errors still appear" {
+    run "${REPO_ROOT}/bot.sh" --quiet --bogus-flag 2>&1
+    [ "${status}" -eq 64 ]
+    [[ "${output}" =~ \[ERROR\] ]]
+    [[ ! "${output}" =~ \[INFO\] ]]
+}
+
+@test "--verbose enables DEBUG log output" {
+    create_fake_workspace
+    install_git_mock
+    install_osc_mock
+    install_jq_passthrough
+    run bash -c "cd '${WORKSPACE}' && '${REPO_ROOT}/bot.sh' --verbose" 2>&1
+    [[ "${output}" =~ \[DEBUG\] ]]
+}
+
 @test "empty SOURCES (all binaries unresolvable) exits 0, not 2" {
     create_fake_workspace
     # git mock: show returns a diff line that produces a binary, but osc always fails to resolve it
