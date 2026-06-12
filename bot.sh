@@ -6,6 +6,8 @@ TMP_DIR=$(mktemp -d)
 PRODUCTCOMPOSE_FILE="${BOT_FILE:-000productcompose/default.productcompose}"
 IBS_BUILD_PROJECT="${BOT_PROJECT:-SUSE:SLFO:Main}"
 BOT_OUTPUT="${BOT_OUTPUT:-text}"
+BOT_TIMEOUT="${BOT_TIMEOUT:-30}"
+BOT_RETRIES="${BOT_RETRIES:-3}"
 
 # LOG_LEVEL: 0=quiet 1=info(default) 2=debug
 LOG_LEVEL=1
@@ -16,6 +18,7 @@ trap 'rm -rf "${TMP_DIR}"' EXIT
 
 EXIT_OK=0
 EXIT_USAGE=64
+EXIT_PREFLIGHT=69
 
 # ─── Args ──────────────────────────────────────────────────────────────────────
 
@@ -77,6 +80,14 @@ parse_args() {
                 BOT_OUTPUT="${2:?--output requires a value}"
                 shift 2
                 ;;
+            --timeout)
+                BOT_TIMEOUT="${2:?--timeout requires a value}"
+                shift 2
+                ;;
+            --retries)
+                BOT_RETRIES="${2:?--retries requires a value}"
+                shift 2
+                ;;
             *)
                 printf '%s [ERROR] unknown option: %s\n' "$(_ts)" "$1" >&2
                 usage >&2
@@ -94,6 +105,62 @@ log_info()  { (( LOG_LEVEL >= 1 )) && printf '%s [INFO]  %s\n' "$(_ts)" "$*" >&2
 log_warn()  { printf '%s [WARN]  %s\n' "$(_ts)" "$*" >&2; }
 log_error() { printf '%s [ERROR] %s\n' "$(_ts)" "$*" >&2; }
 log_debug() { (( LOG_LEVEL >= 2 )) && printf '%s [DEBUG] %s\n' "$(_ts)" "$*" >&2 || return 0; }
+
+# ─── Network ───────────────────────────────────────────────────────────────────
+
+# with_retry <label> <cmd> [args...]
+# Runs <cmd> up to BOT_RETRIES times with timeout BOT_TIMEOUT.
+# Returns 0 on first success; logs WARN on each failure; logs ERROR and returns
+# the last exit code when retries are exhausted.
+with_retry() {
+    local label="$1"; shift
+    local attempt=1 sleep_for=1 rc
+    while :; do
+        rc=0
+        timeout "${BOT_TIMEOUT}" "$@" || rc=$?
+        if (( rc == 0 )); then return 0; fi
+        if (( attempt >= BOT_RETRIES )); then
+            log_error "${label} failed after ${attempt} attempt(s) (last rc=${rc})"
+            return "${rc}"
+        fi
+        log_warn "${label} failed (attempt ${attempt}/${BOT_RETRIES}, rc=${rc}), retrying in ${sleep_for}s"
+        sleep "${sleep_for}"
+        attempt=$(( attempt + 1 ))
+        sleep_for=$(( sleep_for * 2 ))
+    done
+}
+
+# ─── Preflight ─────────────────────────────────────────────────────────────────
+
+preflight() {
+    # Skipped whenever BOT_TEST_FIXTURES is set (even to empty), unless BOT_FORCE_PREFLIGHT=1.
+    if [[ -n "${BOT_TEST_FIXTURES+x}" && -z "${BOT_FORCE_PREFLIGHT:-}" ]]; then
+        return 0
+    fi
+
+    local missing=()
+    for bin in git jq awk osc xargs timeout ssh; do
+        command -v "${bin}" >/dev/null 2>&1 || missing+=("${bin}")
+    done
+    if (( ${#missing[@]} > 0 )); then
+        log_error "missing dependencies: ${missing[*]}"
+        log_error "install the missing tools and retry"
+        exit "${EXIT_PREFLIGHT}"
+    fi
+
+    if ! timeout 10 osc -A https://api.suse.de whois >/dev/null 2>&1; then
+        log_error "osc authentication failed for https://api.suse.de — run 'osc -A https://api.suse.de login' or set credentials"
+        exit "${EXIT_PREFLIGHT}"
+    fi
+
+    local ssh_rc=0
+    timeout 10 ssh -o BatchMode=yes -o StrictHostKeyChecking=accept-new \
+        -T gitea@src.suse.de 2>/dev/null || ssh_rc=$?
+    if (( ssh_rc == 255 )); then
+        log_error "ssh to gitea@src.suse.de failed — check your SSH key"
+        exit "${EXIT_PREFLIGHT}"
+    fi
+}
 
 # ─── Output ────────────────────────────────────────────────────────────────────
 
@@ -122,7 +189,7 @@ emit_report() {
 
 resolve_workdir() {
     if ! git rev-parse --is-inside-work-tree >/dev/null 2>&1 || [ ! -f "${PRODUCTCOMPOSE_FILE}" ]; then
-        git clone gitea@src.suse.de:products/SLES.git "${TMP_DIR}/SLES"
+        with_retry "git clone SLES" git clone gitea@src.suse.de:products/SLES.git "${TMP_DIR}/SLES"
         cd "${TMP_DIR}/SLES"
     fi
 }
@@ -148,19 +215,36 @@ foobar"
 
 resolve_sources() {
     local binaries="$1"
-    export IBS_BUILD_PROJECT
-    local results
+    export IBS_BUILD_PROJECT BOT_TIMEOUT BOT_RETRIES LOG_LEVEL
+    export -f with_retry log_warn log_error log_info log_debug _ts
+
+    local results_file
+    results_file=$(mktemp "${TMP_DIR}/results.XXXXXX")
+    local xargs_rc=0
+
     # shellcheck disable=SC2016
-    results=$(printf '%s\n' "${binaries}" | grep -v '^$' | xargs -P4 -I{} bash -c '
-        binary="$1"
-        source_pkg=$(osc -A https://api.suse.de bse -B "${IBS_BUILD_PROJECT}" --csv "${binary}" \
-            | awk -F"|" -v project="${IBS_BUILD_PROJECT}" "\$1 == project { print \$2 }")
-        if [[ -n "${source_pkg}" ]]; then
-            echo "SRC:${source_pkg}"
-        else
-            echo "FAIL:${binary}"
-        fi
-    ' _ {})
+    printf '%s\n' "${binaries}" | grep -v '^$' | \
+        xargs -P4 -I{} bash -c '
+            binary="$1"
+            osc_out=""
+            osc_out=$(with_retry "osc bse ${binary}" \
+                osc -A https://api.suse.de bse -B "${IBS_BUILD_PROJECT}" --csv "${binary}") || exit 1
+            source_pkg=$(awk -F"|" -v project="${IBS_BUILD_PROJECT}" \
+                "\$1 == project { print \$2 }" <<< "${osc_out}")
+            if [[ -n "${source_pkg}" ]]; then
+                echo "SRC:${source_pkg}"
+            else
+                echo "FAIL:${binary}"
+            fi
+        ' _ {} >> "${results_file}" || xargs_rc=$?
+
+    if (( xargs_rc != 0 )); then
+        log_error "source resolution failed — one or more osc lookups exhausted retries"
+        exit 1
+    fi
+
+    local results
+    results=$(< "${results_file}")
 
     SOURCES=$(awk -F':' '/^SRC:/ { print $2 }' <<< "${results}" | sort -u)
     FAILED_BINARIES=$(awk -F':' '/^FAIL:/ { print $2 }' <<< "${results}" | sort -u)
@@ -175,7 +259,29 @@ patterns-container"
 }
 
 fetch_maintainership() {
-    git archive --remote=ssh://gitea@src.suse.de/products/SLFO.git slfo-main _maintainership.json | tar -xO
+    local archive_tmp attempt sleep_for rc
+    archive_tmp=$(mktemp "${TMP_DIR}/archive.XXXXXX")
+    attempt=1
+    sleep_for=1
+    while :; do
+        rc=0
+        timeout "${BOT_TIMEOUT}" git archive \
+            --remote=ssh://gitea@src.suse.de/products/SLFO.git \
+            slfo-main _maintainership.json > "${archive_tmp}" || rc=$?
+        if (( rc == 0 )); then
+            tar -xO < "${archive_tmp}"
+            return 0
+        fi
+        if (( attempt >= BOT_RETRIES )); then
+            log_error "git archive (SLFO maintainership) failed after ${attempt} attempt(s) (rc=${rc})"
+            exit 1
+        fi
+        log_warn "git archive (SLFO maintainership) failed (attempt ${attempt}/${BOT_RETRIES}, rc=${rc}), retrying in ${sleep_for}s"
+        sleep "${sleep_for}"
+        attempt=$(( attempt + 1 ))
+        sleep_for=$(( sleep_for * 2 ))
+        : > "${archive_tmp}"
+    done
 }
 
 find_orphans() {
@@ -204,6 +310,7 @@ find_orphans() {
 
 main() {
     parse_args "$@"
+    preflight
     resolve_workdir
 
     local binaries

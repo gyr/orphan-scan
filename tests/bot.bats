@@ -108,6 +108,69 @@ teardown() {
     [[ "${output}" =~ "-- ORPHANED:" ]]
 }
 
+@test "transient osc failure retries and eventually succeeds" {
+    create_fake_workspace
+    install_jq_passthrough
+    # git mock: archive returns maintainership that includes src-pkg so no orphans on success
+    install_mock git '
+case "$1" in
+    rev-parse) exit 0 ;;
+    log)       echo "aaabbbccc111" ;;
+    show)      printf "+  - newpkg\n" ;;
+    clone)     exit 0 ;;
+    archive)
+        tmpd=$(mktemp -d)
+        printf "%s" '"'"'{"packages":{"src-pkg":{"users":["someone"],"groups":[]}}}'"'"' \
+            > "${tmpd}/_maintainership.json"
+        tar -C "${tmpd}" -c _maintainership.json
+        rm -rf "${tmpd}"
+        ;;
+    *)         exit 0 ;;
+esac
+'
+    # osc mock: fails twice, succeeds on third attempt
+    local attempt_file="${MOCK_DIR}/osc_attempt"
+    printf '0' > "${attempt_file}"
+    install_mock osc "
+count=\$(cat '${attempt_file}')
+count=\$((count + 1))
+printf '%s' \"\${count}\" > '${attempt_file}'
+if [ \"\${count}\" -lt 3 ]; then
+    exit 1
+fi
+echo 'SUSE:SLFO:Main|src-pkg|x86_64|standard'
+"
+    run bash -c "cd '${WORKSPACE}' && BOT_TEST_FIXTURES= BOT_RETRIES=3 BOT_TIMEOUT=5 '${REPO_ROOT}/bot.sh'" 2>&1
+    [ "${status}" -eq 0 ]
+    [[ "${output}" =~ \[WARN\] ]]
+}
+
+@test "retry exhaustion exits non-zero with ERROR log" {
+    create_fake_workspace
+    install_git_mock
+    install_jq_passthrough
+    # osc mock: always fails
+    install_mock osc 'exit 1'
+    run bash -c "cd '${WORKSPACE}' && BOT_TEST_FIXTURES= BOT_RETRIES=2 BOT_TIMEOUT=5 '${REPO_ROOT}/bot.sh'" 2>&1
+    [ "${status}" -ne 0 ]
+    [[ "${output}" =~ \[ERROR\] ]]
+}
+
+@test "failing osc auth triggers exit 69 with actionable message" {
+    # osc exists but 'osc whois' fails → simulates expired/missing credentials
+    # BOT_FORCE_PREFLIGHT=1 bypasses the BOT_TEST_FIXTURES skip
+    # osc is called as: osc -A https://... whois  (whois is $4, not $1)
+    install_mock osc '
+if printf "%s\n" "$@" | grep -q "^whois$"; then
+    exit 1
+fi
+echo "SUSE:SLFO:Main|src-pkg|x86_64|standard"
+'
+    run bash -c "BOT_FORCE_PREFLIGHT=1 '${REPO_ROOT}/bot.sh'" 2>&1
+    [ "${status}" -eq 69 ]
+    [[ "${output}" =~ "osc authentication failed" ]]
+}
+
 @test "empty SOURCES (all binaries unresolvable) exits 0, not 2" {
     create_fake_workspace
     # git mock: show returns a diff line that produces a binary, but osc always fails to resolve it
