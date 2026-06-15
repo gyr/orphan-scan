@@ -1,0 +1,653 @@
+commit e9faaba3f5f57bf74ee1a9afc3b129697727f247bba1127ba239505d7a048c7c
+Author: Giacomo Leidi <giacomo.leidi@suse.com>
+Date:   2026-05-22 13:11:48 +0200
+
+    Update by package-monkey.
+
+diff --git a/000productcompose/default.productcompose b/000productcompose/default.productcompose
+index b12f971..7ef2b86 100644
+--- a/000productcompose/default.productcompose
++++ b/000productcompose/default.productcompose
+@@ -949,9 +949,12 @@ packagesets:
+     - MozillaFirefox-translations-common
+     - MozillaFirefox-translations-other
+     - NetworkManager
++    - NetworkManager-applet
+     - NetworkManager-branding-SLE    # epic=NetworkManager
+     - NetworkManager-cloud-setup
+     - NetworkManager-config-server
++    - NetworkManager-connection-editor # epic=NetworkManager
++    - NetworkManager-connection-editor-lang
+     - NetworkManager-devel
+     - NetworkManager-lang
+     - NetworkManager-openvpn
+@@ -1174,6 +1177,7 @@ packagesets:
+     - avalon-logkit
+     - avalon-logkit-javadoc
+     - avif-tools
++    - ayatana-indicator3-7-common
+     - babeltrace
+     - babeltrace-devel
+     - bash
+@@ -1515,8 +1519,9 @@ packagesets:
+     - dirmngr
+     - distribution-logos-branding-SLE
+     - distribution-registry
++    - distrobox
+     - distrobox-bash-completion
+-    - distrobox-branding-openSUSE
++    - distrobox-branding-SLE
+     - djvulibre
+     - djvulibre-doc
+     - dmraid
+@@ -2201,9 +2206,12 @@ packagesets:
+     - growpart-generator
+     - grpc-devel
+     - grub2
++    - grub2-arm64-efi
+     - grub2-common
++    - grub2-powerpc-ieee1275
+     - grub2-snapper-plugin
+     - grub2-systemd-sleep-plugin
++    - grub2-x86_64-efi
+     - gsasl
+     - gsasl-devel
+     - gsasl-lang
+@@ -2599,6 +2607,7 @@ packagesets:
+     - kernel-default
+     - kernel-default-devel           # epic=KernelImages
+     - kernel-default-extra
++    - kernel-default-livepatch
+     - kernel-devel                   # epic=KernelImages
+     - kernel-docs
+     - kernel-docs-html
+@@ -2637,6 +2646,7 @@ packagesets:
+     - kernel-firmware-ueagle
+     - kernel-firmware-usb-network
+     - kernel-install-tools
++    - kernel-livepatch-6_12_0-160099_42-default
+     - kernel-livepatch-tools
+     - kernel-livepatch-tools-devel
+     - kernel-macros                  # epic=KernelImages
+@@ -2991,6 +3001,9 @@ packagesets:
+     - libavif16
+     - libavtp0
+     - libavutil59
++    - libayatana-appindicator3-1
++    - libayatana-ido3-0_4-0
++    - libayatana-indicator3-7
+     - libb2-1
+     - libbacktrace0
+     - libbasicobjects-devel
+@@ -5786,7 +5799,6 @@ packagesets:
+     - php8-ctype
+     - php8-curl
+     - php8-dba
+-    - php8-devel
+     - php8-dom
+     - php8-embed
+     - php8-enchant
+@@ -5839,6 +5851,9 @@ packagesets:
+     - pinentry
+     - pipewire
+     - pipewire-alsa                  # epic=Pipewire
++    - pipewire-config-raop
++    - pipewire-config-rates
++    - pipewire-config-upmix
+     - pipewire-doc
+     - pipewire-jack                  # epic=Pipewire
+     - pipewire-lang
+@@ -7435,6 +7450,7 @@ packagesets:
+     - shaderc
+     - shaderc-devel
+     - shadow
++    - shadow-pw-mgmt
+     - shared-mime-info               # epic=Glib2Core
+     - shared-mime-info-lang
+     - sharutils
+@@ -7519,8 +7535,6 @@ packagesets:
+     - stalld
+     - star
+     - strace
+-    - stress-ng
+-    - stress-ng-bash-completion
+     - strip-nondeterminism
+     - strongswan
+     - strongswan-doc
+@@ -7712,8 +7726,6 @@ packagesets:
+     - tomcat11-lib
+     - tomcat11-servlet-6_1-api
+     - tomcat11-webapps
+-    - toolbox
+-    - toolbox-branding-SLE
+     - totem-pl-parser
+     - tpm-tools
+     - tpm-tools-devel
+@@ -7769,6 +7781,8 @@ packagesets:
+     - typelib-1_0-Atk-1_0
+     - typelib-1_0-Atspi-2_0
+     - typelib-1_0-Avahi-0_6
++    - typelib-1_0-AyatanaAppIndicator3-0_1
++    - typelib-1_0-AyatanaIdo3-0_4
+     - typelib-1_0-BlockDev-3_0
+     - typelib-1_0-CloudProviders-0_3_0
+     - typelib-1_0-Colord-1_0
+@@ -8063,6 +8077,7 @@ packagesets:
+     - wireless-regdb
+     - wireless-tools
+     - wireplumber
++    - wireplumber-bash-completion
+     - wireplumber-doc
+     - wireplumber-lang
+     - wireplumber-zsh-completion
+@@ -8270,8 +8285,14 @@ packagesets:
+     - arm-trusted-firmware
+     - arm-trusted-firmware-rpi3      # epic=FirmwareImagesARM
+     - arm-trusted-firmware-rpi4      # epic=FirmwareImagesARM
++    - aws-cli-cmd
++    - aws-cli-image
+     - aws-nitro-enclaves-binaryblobs-upstream
+     - aws-nitro-enclaves-cli
++    - aws-sdk-image
++    - az-cli-cmd
++    - az-cli-image
++    - az-sdk-image
+     - azure-vm-utils                 # epic=HyperVGuest
+     - busybox-warewulf3
+     - cargo-audit
+@@ -8312,8 +8333,8 @@ packagesets:
+     - google-guest-configs
+     - google-guest-oslogin
+     - google-osconfig-agent
++    - google-sdk-image
+     - gprofng
+-    - grub2-arm64-efi
+     - grub2-branding-SLE
+     - gstreamer-plugins-rs           # epic=GStreamerPluginsBad
+     - himmelblau
+@@ -8520,16 +8541,13 @@ packagesets:
+     - fftw3-mpi-devel                # epic=NumericLibraries
+     - glibc-livepatches
+     - grub2-branding-SLE
+-    - grub2-powerpc-ieee1275
+     - ibus-mozc
+     - iprutils
+     - irqbalance
+     - irqbalance-ui
+     - kernel-default-base
+-    - kernel-default-livepatch
+     - kernel-kvmsmall
+     - kernel-kvmsmall-devel
+-    - kernel-livepatch-6_12_0-160099_41-default
+     - libLLVMSPIRVLib21              # epic=OpenGL
+     - libatopology2
+     - libdpdk-26
+@@ -8614,8 +8632,6 @@ packagesets:
+   packages:
+     - dnsdist
+     - grub2-s390x-emu
+-    - kernel-default-livepatch
+-    - kernel-livepatch-6_12_0-160099_41-default
+     - kernel-zfcpdump                # epic=KernelImages
+     - kiwi-settings
+     - libHBAAPI2
+@@ -8677,8 +8693,14 @@ packagesets:
+     - amazon-dracut-config
+     - amazon-ecs-init
+     - amazon-ssm-agent
++    - aws-cli-cmd
++    - aws-cli-image
+     - aws-nitro-enclaves-binaryblobs-upstream
+     - aws-nitro-enclaves-cli
++    - aws-sdk-image
++    - az-cli-cmd
++    - az-cli-image
++    - az-sdk-image
+     - azure-vm-utils                 # epic=HyperVGuest
+     - biosdevname
+     - busybox-warewulf3
+@@ -8727,10 +8749,10 @@ packagesets:
+     - google-guest-configs
+     - google-guest-oslogin
+     - google-osconfig-agent
++    - google-sdk-image
+     - gprofng
+     - grub2-branding-SLE
+     - grub2-i386-pc
+-    - grub2-x86_64-efi
+     - gstreamer-plugins-rs           # epic=GStreamerPluginsBad
+     - himmelblau
+     - himmelblau-qr-greeter          # epic=HyperVGuest
+@@ -8753,13 +8775,11 @@ packagesets:
+     - kernel-azure-extra
+     - kernel-azure-vdso
+     - kernel-default-base
+-    - kernel-default-livepatch
+     - kernel-default-vdso
+     - kernel-kvmsmall
+     - kernel-kvmsmall-devel
+     - kernel-kvmsmall-vdso
+-    - kernel-livepatch-6_12_0-160099_41-default
+-    - kernel-livepatch-6_12_0-160099_41-rt
++    - kernel-livepatch-6_12_0-160099_42-rt
+     - kernel-rt
+     - kernel-rt-devel
+     - kernel-rt-extra
+@@ -8954,6 +8974,7 @@ packagesets:
+     - papi
+     - papi-devel
+     - papi-devel-static
++    - patterns-glibc-hwcaps-x86_64_v3 # epic=SLESPatterns
+     - patterns-sap-minimal_sap       # epic=SLESPatterns
+     - patterns-server-oracle_server  # epic=SLESPatterns
+     - pcm
+@@ -9294,9 +9315,12 @@ packagesets:
+     - MozillaFirefox-translations-common
+     - MozillaFirefox-translations-other
+     - NetworkManager
++    - NetworkManager-applet
+     - NetworkManager-branding-SLE    # epic=NetworkManager
+     - NetworkManager-cloud-setup
+     - NetworkManager-config-server
++    - NetworkManager-connection-editor # epic=NetworkManager
++    - NetworkManager-connection-editor-lang
+     - NetworkManager-devel
+     - NetworkManager-lang
+     - NetworkManager-openvpn
+@@ -9526,6 +9550,7 @@ packagesets:
+     - avalon-logkit
+     - avalon-logkit-javadoc
+     - avif-tools
++    - ayatana-indicator3-7-common
+     - babeltrace
+     - babeltrace-devel
+     - bash
+@@ -9877,8 +9902,9 @@ packagesets:
+     - dirmngr
+     - distribution-logos-branding-SLE
+     - distribution-registry
++    - distrobox
+     - distrobox-bash-completion
+-    - distrobox-branding-openSUSE
++    - distrobox-branding-SLE
+     - djvulibre
+     - djvulibre-doc
+     - dlm-kmp-default                # epic=KernelImages
+@@ -10633,10 +10659,13 @@ packagesets:
+     - growpart-generator
+     - grpc-devel
+     - grub2
++    - grub2-arm64-efi
+     - grub2-branding-SLE
+     - grub2-common
++    - grub2-powerpc-ieee1275
+     - grub2-snapper-plugin
+     - grub2-systemd-sleep-plugin
++    - grub2-x86_64-efi
+     - gsasl
+     - gsasl-devel
+     - gsasl-lang
+@@ -11079,7 +11108,7 @@ packagesets:
+     - kernel-install-tools
+     - kernel-kvmsmall
+     - kernel-kvmsmall-devel
+-    - kernel-livepatch-6_12_0-160099_41-default
++    - kernel-livepatch-6_12_0-160099_42-default
+     - kernel-livepatch-tools
+     - kernel-livepatch-tools-devel
+     - kernel-macros                  # epic=KernelImages
+@@ -11436,6 +11465,9 @@ packagesets:
+     - libavif16
+     - libavtp0
+     - libavutil59
++    - libayatana-appindicator3-1
++    - libayatana-ido3-0_4-0
++    - libayatana-indicator3-7
+     - libb2-1
+     - libbacktrace0
+     - libbasicobjects-devel
+@@ -14320,7 +14352,6 @@ packagesets:
+     - php8-ctype
+     - php8-curl
+     - php8-dba
+-    - php8-devel
+     - php8-dom
+     - php8-embed
+     - php8-enchant
+@@ -14373,6 +14404,9 @@ packagesets:
+     - pinentry
+     - pipewire
+     - pipewire-alsa                  # epic=Pipewire
++    - pipewire-config-raop
++    - pipewire-config-rates
++    - pipewire-config-upmix
+     - pipewire-doc
+     - pipewire-jack                  # epic=Pipewire
+     - pipewire-lang
+@@ -16002,6 +16036,7 @@ packagesets:
+     - shaderc
+     - shaderc-devel
+     - shadow
++    - shadow-pw-mgmt
+     - shared-mime-info               # epic=Glib2Core
+     - shared-mime-info-lang
+     - sharutils
+@@ -16086,8 +16121,6 @@ packagesets:
+     - stalld
+     - star
+     - strace
+-    - stress-ng
+-    - stress-ng-bash-completion
+     - strip-nondeterminism
+     - strongswan
+     - strongswan-doc
+@@ -16285,8 +16318,6 @@ packagesets:
+     - tomcat11-lib
+     - tomcat11-servlet-6_1-api
+     - tomcat11-webapps
+-    - toolbox
+-    - toolbox-branding-SLE
+     - totem-pl-parser
+     - tpm-tools
+     - tpm-tools-devel
+@@ -16346,6 +16377,8 @@ packagesets:
+     - typelib-1_0-Atk-1_0
+     - typelib-1_0-Atspi-2_0
+     - typelib-1_0-Avahi-0_6
++    - typelib-1_0-AyatanaAppIndicator3-0_1
++    - typelib-1_0-AyatanaIdo3-0_4
+     - typelib-1_0-BlockDev-3_0
+     - typelib-1_0-CloudProviders-0_3_0
+     - typelib-1_0-Colord-1_0
+@@ -16640,6 +16673,7 @@ packagesets:
+     - wireless-regdb
+     - wireless-tools
+     - wireplumber
++    - wireplumber-bash-completion
+     - wireplumber-doc
+     - wireplumber-lang
+     - wireplumber-zsh-completion
+@@ -16830,7 +16864,6 @@ packagesets:
+   architectures:
+     - ppc64le
+   packages:
+-    - grub2-powerpc-ieee1275
+     - iprutils
+     - libnxz-devel
+     - libnxz0
+@@ -16871,8 +16904,14 @@ packagesets:
+     - amazon-dracut-config
+     - amazon-ecs-init
+     - amazon-ssm-agent
++    - aws-cli-cmd
++    - aws-cli-image
+     - aws-nitro-enclaves-binaryblobs-upstream
+     - aws-nitro-enclaves-cli
++    - aws-sdk-image
++    - az-cli-cmd
++    - az-cli-image
++    - az-sdk-image
+     - azure-vm-utils                 # epic=HyperVGuest
+     - biosdevname
+     - busybox-warewulf3
+@@ -16918,9 +16957,9 @@ packagesets:
+     - google-guest-configs
+     - google-guest-oslogin
+     - google-osconfig-agent
++    - google-sdk-image
+     - gprofng
+     - grub2-i386-pc
+-    - grub2-x86_64-efi
+     - gstreamer-plugins-rs           # epic=GStreamerPluginsBad
+     - himmelblau
+     - himmelblau-qr-greeter          # epic=HyperVGuest
+@@ -16941,7 +16980,7 @@ packagesets:
+     - kernel-azure-vdso
+     - kernel-default-vdso
+     - kernel-kvmsmall-vdso
+-    - kernel-livepatch-6_12_0-160099_41-rt
++    - kernel-livepatch-6_12_0-160099_42-rt
+     - kernel-rt
+     - kernel-rt-devel
+     - kernel-rt-extra
+@@ -17092,6 +17131,7 @@ packagesets:
+     - ovmf
+     - ovmf-tools
+     - pam-himmelblau
++    - patterns-glibc-hwcaps-x86_64_v3 # epic=SLESPatterns
+     - patterns-server-oracle_server  # epic=SLESPatterns
+     - pcm
+     - pcp-pmda-resctrl
+@@ -17232,9 +17272,12 @@ packagesets:
+     - MozillaFirefox-translations-common
+     - MozillaFirefox-translations-other
+     - NetworkManager
++    - NetworkManager-applet
+     - NetworkManager-branding-SLE    # epic=NetworkManager
+     - NetworkManager-cloud-setup
+     - NetworkManager-config-server
++    - NetworkManager-connection-editor # epic=NetworkManager
++    - NetworkManager-connection-editor-lang
+     - NetworkManager-devel
+     - NetworkManager-lang
+     - NetworkManager-openvpn
+@@ -17457,6 +17500,7 @@ packagesets:
+     - avalon-logkit
+     - avalon-logkit-javadoc
+     - avif-tools
++    - ayatana-indicator3-7-common
+     - babeltrace
+     - babeltrace-devel
+     - bash
+@@ -17807,8 +17851,9 @@ packagesets:
+     - dirmngr
+     - distribution-logos-branding-SLE
+     - distribution-registry
++    - distrobox
+     - distrobox-bash-completion
+-    - distrobox-branding-openSUSE
++    - distrobox-branding-SLE
+     - djvulibre
+     - djvulibre-doc
+     - dlm-kmp-default                # epic=KernelImages
+@@ -18555,9 +18600,12 @@ packagesets:
+     - growpart-generator
+     - grpc-devel
+     - grub2
++    - grub2-arm64-efi
+     - grub2-common
++    - grub2-powerpc-ieee1275
+     - grub2-snapper-plugin
+     - grub2-systemd-sleep-plugin
++    - grub2-x86_64-efi
+     - gsasl
+     - gsasl-devel
+     - gsasl-lang
+@@ -18955,6 +19003,7 @@ packagesets:
+     - kernel-default
+     - kernel-default-devel           # epic=KernelImages
+     - kernel-default-extra
++    - kernel-default-livepatch
+     - kernel-devel                   # epic=KernelImages
+     - kernel-docs
+     - kernel-docs-html
+@@ -18993,6 +19042,7 @@ packagesets:
+     - kernel-firmware-ueagle
+     - kernel-firmware-usb-network
+     - kernel-install-tools
++    - kernel-livepatch-6_12_0-160099_42-default
+     - kernel-livepatch-tools
+     - kernel-livepatch-tools-devel
+     - kernel-macros                  # epic=KernelImages
+@@ -19347,6 +19397,9 @@ packagesets:
+     - libavif16
+     - libavtp0
+     - libavutil59
++    - libayatana-appindicator3-1
++    - libayatana-ido3-0_4-0
++    - libayatana-indicator3-7
+     - libb2-1
+     - libbacktrace0
+     - libbasicobjects-devel
+@@ -22171,7 +22224,6 @@ packagesets:
+     - php8-ctype
+     - php8-curl
+     - php8-dba
+-    - php8-devel
+     - php8-dom
+     - php8-embed
+     - php8-enchant
+@@ -22224,6 +22276,9 @@ packagesets:
+     - pinentry
+     - pipewire
+     - pipewire-alsa                  # epic=Pipewire
++    - pipewire-config-raop
++    - pipewire-config-rates
++    - pipewire-config-upmix
+     - pipewire-doc
+     - pipewire-jack                  # epic=Pipewire
+     - pipewire-lang
+@@ -23842,6 +23897,7 @@ packagesets:
+     - shaderc
+     - shaderc-devel
+     - shadow
++    - shadow-pw-mgmt
+     - shared-mime-info               # epic=Glib2Core
+     - shared-mime-info-lang
+     - sharutils
+@@ -23927,8 +23983,6 @@ packagesets:
+     - stalld
+     - star
+     - strace
+-    - stress-ng
+-    - stress-ng-bash-completion
+     - strip-nondeterminism
+     - strongswan
+     - strongswan-doc
+@@ -24122,8 +24176,6 @@ packagesets:
+     - tomcat11-lib
+     - tomcat11-servlet-6_1-api
+     - tomcat11-webapps
+-    - toolbox
+-    - toolbox-branding-SLE
+     - totem-pl-parser
+     - tpm-tools
+     - tpm-tools-devel
+@@ -24183,6 +24235,8 @@ packagesets:
+     - typelib-1_0-Atk-1_0
+     - typelib-1_0-Atspi-2_0
+     - typelib-1_0-Avahi-0_6
++    - typelib-1_0-AyatanaAppIndicator3-0_1
++    - typelib-1_0-AyatanaIdo3-0_4
+     - typelib-1_0-BlockDev-3_0
+     - typelib-1_0-CloudProviders-0_3_0
+     - typelib-1_0-Colord-1_0
+@@ -24477,6 +24531,7 @@ packagesets:
+     - wireless-regdb
+     - wireless-tools
+     - wireplumber
++    - wireplumber-bash-completion
+     - wireplumber-doc
+     - wireplumber-lang
+     - wireplumber-zsh-completion
+@@ -24684,8 +24739,14 @@ packagesets:
+     - arm-trusted-firmware
+     - arm-trusted-firmware-rpi3      # epic=FirmwareImagesARM
+     - arm-trusted-firmware-rpi4      # epic=FirmwareImagesARM
++    - aws-cli-cmd
++    - aws-cli-image
+     - aws-nitro-enclaves-binaryblobs-upstream
+     - aws-nitro-enclaves-cli
++    - aws-sdk-image
++    - az-cli-cmd
++    - az-cli-image
++    - az-sdk-image
+     - azure-vm-utils                 # epic=HyperVGuest
+     - busybox-warewulf3
+     - cargo-audit
+@@ -24733,8 +24794,8 @@ packagesets:
+     - google-guest-configs
+     - google-guest-oslogin
+     - google-osconfig-agent
++    - google-sdk-image
+     - gprofng
+-    - grub2-arm64-efi
+     - grub2-branding-SLE
+     - gstreamer-plugins-rs           # epic=GStreamerPluginsBad
+     - himmelblau
+@@ -24952,16 +25013,13 @@ packagesets:
+     - fftw3-mpi-devel                # epic=NumericLibraries
+     - glibc-livepatches
+     - grub2-branding-SLE
+-    - grub2-powerpc-ieee1275
+     - ibus-mozc
+     - iprutils
+     - irqbalance
+     - irqbalance-ui
+     - kernel-default-base
+-    - kernel-default-livepatch
+     - kernel-kvmsmall
+     - kernel-kvmsmall-devel
+-    - kernel-livepatch-6_12_0-160099_41-default
+     - libLLVMSPIRVLib21              # epic=OpenGL
+     - libatopology2
+     - libdpdk-26
+@@ -25068,8 +25126,6 @@ packagesets:
+   packages:
+     - dnsdist
+     - grub2-s390x-emu
+-    - kernel-default-livepatch
+-    - kernel-livepatch-6_12_0-160099_41-default
+     - kernel-zfcpdump                # epic=KernelImages
+     - kiwi-settings
+     - libHBAAPI2
+@@ -25140,8 +25196,14 @@ packagesets:
+     - ansible-sap-operations         # epic=Ansible
+     - ansible-sap-playbooks          # epic=Ansible
+     - ansible-trento
++    - aws-cli-cmd
++    - aws-cli-image
+     - aws-nitro-enclaves-binaryblobs-upstream
+     - aws-nitro-enclaves-cli
++    - aws-sdk-image
++    - az-cli-cmd
++    - az-cli-image
++    - az-sdk-image
+     - azure-vm-utils                 # epic=HyperVGuest
+     - biosdevname
+     - busybox-warewulf3
+@@ -25196,10 +25258,10 @@ packagesets:
+     - google-guest-configs
+     - google-guest-oslogin
+     - google-osconfig-agent
++    - google-sdk-image
+     - gprofng
+     - grub2-branding-SLE
+     - grub2-i386-pc
+-    - grub2-x86_64-efi
+     - gstreamer-plugins-rs           # epic=GStreamerPluginsBad
+     - himmelblau
+     - himmelblau-qr-greeter          # epic=HyperVGuest
+@@ -25222,13 +25284,11 @@ packagesets:
+     - kernel-azure-extra
+     - kernel-azure-vdso
+     - kernel-default-base
+-    - kernel-default-livepatch
+     - kernel-default-vdso
+     - kernel-kvmsmall
+     - kernel-kvmsmall-devel
+     - kernel-kvmsmall-vdso
+-    - kernel-livepatch-6_12_0-160099_41-default
+-    - kernel-livepatch-6_12_0-160099_41-rt
++    - kernel-livepatch-6_12_0-160099_42-rt
+     - kernel-rt
+     - kernel-rt-devel
+     - kernel-rt-extra
+@@ -25423,6 +25483,7 @@ packagesets:
+     - papi
+     - papi-devel
+     - papi-devel-static
++    - patterns-glibc-hwcaps-x86_64_v3 # epic=SLESPatterns
+     - patterns-sap-APP               # epic=SAP
+     - patterns-sap-DB                # epic=SAP
+     - patterns-sap-HAAPP             # epic=SAP
