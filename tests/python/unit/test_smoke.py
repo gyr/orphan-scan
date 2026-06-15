@@ -11,7 +11,6 @@ _SUBMODULES = [
     "bugowner.exceptions",
     "bugowner.logging_setup",
     "bugowner.network",
-    "bugowner.preflight",
     "bugowner.report",
     "bugowner.runner",
     "bugowner.pipeline",

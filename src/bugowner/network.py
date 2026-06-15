@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-import subprocess
+import subprocess  # nosec B404 - imported for subprocess.TimeoutExpired; no command construction here
 from typing import TYPE_CHECKING
 
 from bugowner.exceptions import NetworkTimeout
@@ -36,8 +36,8 @@ def run_with_timeout(
     -------
     subprocess.CompletedProcess[str]
         Returned as-is on success.  Non-zero returncode is NOT raised here;
-        callers decide whether a non-zero exit means PreflightFailed,
-        PipelineError, or something else.
+        callers decide whether a non-zero exit means a pipeline error or
+        something else.
 
     Raises
     ------

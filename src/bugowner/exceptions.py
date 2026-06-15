@@ -1,4 +1,4 @@
-"""Exception hierarchy for bugowner: base error, preflight, network, pipeline."""
+"""Exception hierarchy for bugowner: network, pipeline."""
 
 from __future__ import annotations
 

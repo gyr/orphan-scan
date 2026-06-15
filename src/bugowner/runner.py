@@ -28,7 +28,7 @@ security invariants that must never be violated:
 
 from __future__ import annotations
 
-import subprocess
+import subprocess  # nosec B404 - subprocess is required for external tool invocation (osc, ssh, git)
 from typing import TYPE_CHECKING, Protocol, runtime_checkable
 
 if TYPE_CHECKING:
@@ -96,7 +96,7 @@ def default_runner(
             f"argv must be list[str], got {type(argv).__name__!r}. "
             "Never pass a shell string — invariant (a)."
         )
-    return subprocess.run(
+    return subprocess.run(  # nosec B603 - argv is list[str], shell=True is never set; safe by construction
         argv,
         timeout=timeout,
         cwd=cwd,
