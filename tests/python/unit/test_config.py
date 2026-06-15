@@ -34,11 +34,6 @@ def test_config_default_timeout_is_30() -> None:
     assert cfg.timeout == 30
 
 
-def test_config_default_parallelism_is_4() -> None:
-    cfg = Config()
-    assert cfg.parallelism == 4
-
-
 # ---------------------------------------------------------------------------
 # Immutability
 # ---------------------------------------------------------------------------
@@ -66,6 +61,16 @@ def test_config_empty_project_raises_value_error() -> None:
         Config(project="")
 
 
+def test_config_project_path_traversal_raises_value_error() -> None:
+    with pytest.raises(ValueError, match="project"):
+        Config(project="../../admin")
+
+
+def test_config_project_query_injection_raises_value_error() -> None:
+    with pytest.raises(ValueError, match="project"):
+        Config(project="proj?evil=1")
+
+
 def test_config_bad_output_raises_value_error() -> None:
     with pytest.raises(ValueError, match="output"):
         Config(output="yaml")  # type: ignore[arg-type]
@@ -89,21 +94,6 @@ def test_config_timeout_zero_raises_value_error() -> None:
 def test_config_timeout_negative_raises_value_error() -> None:
     with pytest.raises(ValueError, match="timeout"):
         Config(timeout=-1)
-
-
-# ---------------------------------------------------------------------------
-# Validation — parallelism
-# ---------------------------------------------------------------------------
-
-
-def test_config_parallelism_zero_raises_value_error() -> None:
-    with pytest.raises(ValueError, match="parallelism"):
-        Config(parallelism=0)
-
-
-def test_config_parallelism_negative_raises_value_error() -> None:
-    with pytest.raises(ValueError, match="parallelism"):
-        Config(parallelism=-5)
 
 
 # ---------------------------------------------------------------------------
