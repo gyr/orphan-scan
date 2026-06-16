@@ -12,10 +12,14 @@ from typing import TYPE_CHECKING, Any
 
 import pytest
 
-from bugowner.config import Config
-from bugowner.exceptions import NetworkTimeout, PipelineError, PipelineErrorReason
-from bugowner.pipeline import check_orphans
-from bugowner.report import OrphanReport
+from compose_orphans.config import Config
+from compose_orphans.exceptions import (
+    NetworkTimeout,
+    PipelineError,
+    PipelineErrorReason,
+)
+from compose_orphans.pipeline import check_orphans
+from compose_orphans.report import OrphanReport
 
 if TYPE_CHECKING:
     import subprocess
@@ -164,13 +168,13 @@ def test_network_timeout_propagates() -> None:
     assert exc_info.value.label == "fetch"
 
 
-def test_public_api_importable_from_bugowner() -> None:
-    """from bugowner import Config, OrphanReport, Runner, check_orphans succeeds."""
+def test_public_api_importable_from_compose_orphans() -> None:
+    """Public API symbols are importable from compose_orphans."""
     # These imports are the assertions — if any raises, the test fails.
-    from bugowner import Config as C
-    from bugowner import OrphanReport as R
-    from bugowner import Runner as Ru
-    from bugowner import check_orphans as fn
+    from compose_orphans import Config as C
+    from compose_orphans import OrphanReport as R
+    from compose_orphans import Runner as Ru
+    from compose_orphans import check_orphans as fn
 
     assert C is Config
     assert R is OrphanReport

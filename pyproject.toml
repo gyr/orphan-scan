@@ -1,7 +1,7 @@
 [project]
-name = "bugowner"
+name = "compose-orphans"
 version = "0.1.0"
-description = "Detect orphan source packages in the SLES product compose"
+description = "Find orphan packages in the productcompose"
 readme = "README.md"
 license = {text = "Apache-2.0"}
 authors = [{name = "Gustavo Yokoyama Ribeiro"}]
@@ -22,7 +22,7 @@ classifiers = [
 ]
 
 [project.scripts]
-bugowner = "bugowner.cli:main"
+compose-orphans = "compose_orphans.cli:main"
 
 [project.optional-dependencies]
 dev = ["pytest>=7", "pytest-cov", "ruff", "mypy", "bandit>=1.7"]
@@ -35,7 +35,7 @@ build-backend = "setuptools.build_meta"
 where = ["src"]
 
 [tool.setuptools.package-data]
-"bugowner" = ["py.typed"]
+"compose_orphans" = ["py.typed"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests/python"]
@@ -45,8 +45,8 @@ markers = ["integration: end-to-end tests (slower)"]
 
 [tool.coverage.run]
 branch = true
-source = ["src/bugowner"]
-omit = ["src/bugowner/__main__.py"]
+source = ["src/compose_orphans"]
+omit = ["src/compose_orphans/__main__.py"]
 
 [tool.coverage.report]
 fail_under = 85

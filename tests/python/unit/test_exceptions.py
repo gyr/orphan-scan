@@ -1,10 +1,10 @@
-"""Tests for bugowner.exceptions — BugownerError, PipelineError, PipelineErrorReason."""
+"""Tests for compose_orphans.exceptions — exception hierarchy."""
 
 from __future__ import annotations
 
 import pytest
 
-from bugowner.exceptions import (
+from compose_orphans.exceptions import (
     BugownerError,
     NetworkTimeout,
     PipelineError,
@@ -134,17 +134,17 @@ def test_pipeline_error_supports_exception_chaining() -> None:
 
 
 # ---------------------------------------------------------------------------
-# Cycle 9 — Public API: all four names importable from bugowner and in __all__
+# Cycle 9 — Public API: all four names importable from compose_orphans and in __all__
 # ---------------------------------------------------------------------------
 
 
 def test_public_api_imports_and_all() -> None:
-    """All four exception names must be importable from bugowner and in __all__."""
-    import bugowner  # noqa: PLC0415
-    from bugowner import BugownerError as PublicBugownerError  # noqa: PLC0415
-    from bugowner import NetworkTimeout as PublicNetworkTimeout  # noqa: PLC0415
-    from bugowner import PipelineError as PublicPipelineError  # noqa: PLC0415
-    from bugowner import (
+    """Exception names importable from compose_orphans are listed in __all__."""
+    import compose_orphans  # noqa: PLC0415
+    from compose_orphans import BugownerError as PublicBugownerError  # noqa: PLC0415
+    from compose_orphans import NetworkTimeout as PublicNetworkTimeout  # noqa: PLC0415
+    from compose_orphans import PipelineError as PublicPipelineError  # noqa: PLC0415
+    from compose_orphans import (
         PipelineErrorReason as PublicPipelineErrorReason,  # noqa: PLC0415
     )
 
@@ -155,7 +155,9 @@ def test_public_api_imports_and_all() -> None:
         "PipelineErrorReason",
     )
     for name in expected_names:
-        assert name in bugowner.__all__, f"{name!r} missing from bugowner.__all__"
+        assert name in compose_orphans.__all__, (
+            f"{name!r} missing from compose_orphans.__all__"
+        )
 
     # Verify the re-exports are the same objects as the originals
     assert PublicBugownerError is BugownerError

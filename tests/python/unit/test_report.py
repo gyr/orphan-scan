@@ -1,4 +1,4 @@
-"""Tests for bugowner.report — OrphanReport, emitters, and EMITTERS registry."""
+"""Tests for compose_orphans.report — OrphanReport, emitters, and EMITTERS registry."""
 
 from __future__ import annotations
 
@@ -7,7 +7,7 @@ import json
 from dataclasses import FrozenInstanceError
 from typing import TextIO
 
-from bugowner.report import EMITTERS, VALID_OUTPUTS, OrphanReport
+from compose_orphans.report import EMITTERS, VALID_OUTPUTS, OrphanReport
 
 
 def test_orphan_report_is_clean_true() -> None:
@@ -118,7 +118,7 @@ def test_valid_outputs_matches_emitters_keys() -> None:
 
 def test_config_output_validation_uses_valid_outputs() -> None:
     """Config validates output using VALID_OUTPUTS: invalid raises, valid passes."""
-    from bugowner.config import Config
+    from compose_orphans.config import Config
 
     with __import__("pytest").raises(ValueError, match="output"):
         Config(output="invalid")  # type: ignore[arg-type]

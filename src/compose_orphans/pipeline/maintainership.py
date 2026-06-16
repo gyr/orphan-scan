@@ -11,12 +11,16 @@ import subprocess  # nosec B404 - imported for TimeoutExpired only; no command c
 import tarfile
 from typing import TYPE_CHECKING
 
-from bugowner.exceptions import NetworkTimeout, PipelineError, PipelineErrorReason
-from bugowner.runner import default_binary_runner
+from compose_orphans.exceptions import (
+    NetworkTimeout,
+    PipelineError,
+    PipelineErrorReason,
+)
+from compose_orphans.runner import default_binary_runner
 
 if TYPE_CHECKING:
-    from bugowner.config import Config
-    from bugowner.runner import BinaryRunner
+    from compose_orphans.config import Config
+    from compose_orphans.runner import BinaryRunner
 
 GIT_ARCHIVE_ARGV: list[str] = [
     "git",

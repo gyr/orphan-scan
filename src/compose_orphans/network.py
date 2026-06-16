@@ -5,10 +5,10 @@ from __future__ import annotations
 import subprocess  # nosec B404 - imported for subprocess.TimeoutExpired; no command construction here
 from typing import TYPE_CHECKING
 
-from bugowner.exceptions import NetworkTimeout
+from compose_orphans.exceptions import NetworkTimeout
 
 if TYPE_CHECKING:
-    from bugowner.runner import Runner
+    from compose_orphans.runner import Runner
 
 
 def run_with_timeout(

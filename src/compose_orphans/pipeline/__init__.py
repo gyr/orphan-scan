@@ -4,13 +4,13 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Callable
 
-from bugowner.config import Config
-from bugowner.pipeline.diff import extract_added_binaries, resolve_workdir
-from bugowner.pipeline.maintainership import fetch_maintainership
-from bugowner.pipeline.orphans import find_orphans
-from bugowner.pipeline.sources import resolve_sources
-from bugowner.report import OrphanReport
-from bugowner.runner import Runner, default_runner
+from compose_orphans.config import Config
+from compose_orphans.pipeline.diff import extract_added_binaries, resolve_workdir
+from compose_orphans.pipeline.maintainership import fetch_maintainership
+from compose_orphans.pipeline.orphans import find_orphans
+from compose_orphans.pipeline.sources import resolve_sources
+from compose_orphans.report import OrphanReport
+from compose_orphans.runner import Runner, default_runner
 
 if TYPE_CHECKING:
     from pathlib import Path

@@ -6,7 +6,7 @@ import json
 import logging
 import re
 
-from bugowner.logging_setup import JsonFormatter, TextFormatter
+from compose_orphans.logging_setup import JsonFormatter, TextFormatter
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -167,9 +167,9 @@ def test_json_formatter_logger_field_matches_logger_name() -> None:
 
 def test_json_formatter_logger_field_reflects_custom_logger_name() -> None:
     formatter = JsonFormatter()
-    record = _make_record("custom logger", name="bugowner.pipeline")
+    record = _make_record("custom logger", name="compose_orphans.pipeline")
     parsed = json.loads(formatter.format(record))
-    assert parsed["logger"] == "bugowner.pipeline"
+    assert parsed["logger"] == "compose_orphans.pipeline"
 
 
 def test_json_formatter_ts_field_is_utc_iso8601() -> None:

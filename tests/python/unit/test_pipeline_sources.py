@@ -1,4 +1,4 @@
-"""Tests for bugowner.pipeline.sources — resolve_sources and _build_bulk_map."""
+"""Tests for compose_orphans.pipeline.sources — resolve_sources and _build_bulk_map."""
 
 from __future__ import annotations
 
@@ -11,9 +11,9 @@ import pytest
 if TYPE_CHECKING:
     from pathlib import Path
 
-from bugowner.config import Config
-from bugowner.exceptions import PipelineError, PipelineErrorReason
-from bugowner.pipeline.sources import _build_bulk_map, resolve_sources
+from compose_orphans.config import Config
+from compose_orphans.exceptions import PipelineError, PipelineErrorReason
+from compose_orphans.pipeline.sources import _build_bulk_map, resolve_sources
 
 # ---------------------------------------------------------------------------
 # Minimal XML fixtures
@@ -235,7 +235,7 @@ def test_resolve_sources_passes_cwd_none_to_runner() -> None:
 
 def test_resolve_sources_forwards_timeout_to_runner() -> None:
     """Runner must receive timeout == config.timeout (not a hard-coded value)."""
-    from bugowner.config import Config
+    from compose_orphans.config import Config
 
     cfg = Config(timeout=99)
     bulk_argv = (

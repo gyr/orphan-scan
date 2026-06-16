@@ -1,8 +1,8 @@
-"""Tests for bugowner.pipeline.orphans — find_orphans truth table and integration."""
+"""Tests for compose_orphans.pipeline.orphans — find_orphans."""
 
 from __future__ import annotations
 
-from bugowner.pipeline.orphans import find_orphans
+from compose_orphans.pipeline.orphans import find_orphans
 
 # ---------------------------------------------------------------------------
 # Helpers

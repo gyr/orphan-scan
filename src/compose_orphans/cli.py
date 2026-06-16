@@ -8,13 +8,13 @@ import sys
 from importlib.metadata import version as _pkg_version
 from pathlib import Path
 
-from bugowner.config import Config
-from bugowner.exceptions import NetworkTimeout, PipelineError
-from bugowner.logging_setup import setup_logging
-from bugowner.pipeline import check_orphans
-from bugowner.report import EMITTERS
+from compose_orphans.config import Config
+from compose_orphans.exceptions import NetworkTimeout, PipelineError
+from compose_orphans.logging_setup import setup_logging
+from compose_orphans.pipeline import check_orphans
+from compose_orphans.report import EMITTERS
 
-_VERSION = _pkg_version("bugowner")
+_VERSION = _pkg_version("compose-orphans")
 _log = logging.getLogger(__name__)
 
 # EX_USAGE (sysexits.h) — used when argparse would return exit 2
@@ -23,10 +23,12 @@ _EX_USAGE = 64
 
 def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        prog="bugowner",
-        description="Detect orphan source packages in the SLES product compose.",
+        prog="compose-orphans",
+        description="Find orphan packages in the productcompose.",
     )
-    parser.add_argument("--version", action="version", version=f"bugowner {_VERSION}")
+    parser.add_argument(
+        "--version", action="version", version=f"compose-orphans {_VERSION}"
+    )
     parser.add_argument("--project", default=None, help="OBS project name.")
     parser.add_argument(
         "--file",
@@ -89,7 +91,7 @@ def _parse_args(argv: list[str] | None) -> argparse.Namespace:
 
 
 def main(argv: list[str] | None = None) -> None:
-    """Entry point for the bugowner CLI.
+    """Entry point for the compose-orphans CLI.
 
     Args:
         argv: Argument list (defaults to ``sys.argv[1:]`` when ``None``).

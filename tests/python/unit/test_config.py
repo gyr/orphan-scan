@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 
-from bugowner.config import Config
+from compose_orphans.config import Config
 
 # ---------------------------------------------------------------------------
 # Defaults
@@ -119,10 +119,10 @@ def test_config_valid_productcompose_file_as_path() -> None:
 
 def test_from_env_no_env_vars_matches_defaults(monkeypatch: pytest.MonkeyPatch) -> None:
     for var in (
-        "BUGOWNER_PROJECT",
-        "BUGOWNER_FILE",
-        "BUGOWNER_OUTPUT",
-        "BUGOWNER_TIMEOUT",
+        "COMPOSE_ORPHANS_PROJECT",
+        "COMPOSE_ORPHANS_FILE",
+        "COMPOSE_ORPHANS_OUTPUT",
+        "COMPOSE_ORPHANS_TIMEOUT",
     ):
         monkeypatch.delenv(var, raising=False)
     assert Config.from_env() == Config()
@@ -134,37 +134,37 @@ def test_from_env_no_env_vars_matches_defaults(monkeypatch: pytest.MonkeyPatch) 
 
 
 def test_from_env_reads_bugowner_project(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("BUGOWNER_PROJECT", "SUSE:SLFO:Test")
-    monkeypatch.delenv("BUGOWNER_FILE", raising=False)
-    monkeypatch.delenv("BUGOWNER_OUTPUT", raising=False)
-    monkeypatch.delenv("BUGOWNER_TIMEOUT", raising=False)
+    monkeypatch.setenv("COMPOSE_ORPHANS_PROJECT", "SUSE:SLFO:Test")
+    monkeypatch.delenv("COMPOSE_ORPHANS_FILE", raising=False)
+    monkeypatch.delenv("COMPOSE_ORPHANS_OUTPUT", raising=False)
+    monkeypatch.delenv("COMPOSE_ORPHANS_TIMEOUT", raising=False)
     cfg = Config.from_env()
     assert cfg.project == "SUSE:SLFO:Test"
 
 
 def test_from_env_reads_bugowner_file(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("BUGOWNER_FILE", "/some/path/my.productcompose")
-    monkeypatch.delenv("BUGOWNER_PROJECT", raising=False)
-    monkeypatch.delenv("BUGOWNER_OUTPUT", raising=False)
-    monkeypatch.delenv("BUGOWNER_TIMEOUT", raising=False)
+    monkeypatch.setenv("COMPOSE_ORPHANS_FILE", "/some/path/my.productcompose")
+    monkeypatch.delenv("COMPOSE_ORPHANS_PROJECT", raising=False)
+    monkeypatch.delenv("COMPOSE_ORPHANS_OUTPUT", raising=False)
+    monkeypatch.delenv("COMPOSE_ORPHANS_TIMEOUT", raising=False)
     cfg = Config.from_env()
     assert cfg.productcompose_file == Path("/some/path/my.productcompose")
 
 
 def test_from_env_reads_bugowner_output(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("BUGOWNER_OUTPUT", "json")
-    monkeypatch.delenv("BUGOWNER_PROJECT", raising=False)
-    monkeypatch.delenv("BUGOWNER_FILE", raising=False)
-    monkeypatch.delenv("BUGOWNER_TIMEOUT", raising=False)
+    monkeypatch.setenv("COMPOSE_ORPHANS_OUTPUT", "json")
+    monkeypatch.delenv("COMPOSE_ORPHANS_PROJECT", raising=False)
+    monkeypatch.delenv("COMPOSE_ORPHANS_FILE", raising=False)
+    monkeypatch.delenv("COMPOSE_ORPHANS_TIMEOUT", raising=False)
     cfg = Config.from_env()
     assert cfg.output == "json"
 
 
 def test_from_env_reads_bugowner_timeout(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("BUGOWNER_TIMEOUT", "60")
-    monkeypatch.delenv("BUGOWNER_PROJECT", raising=False)
-    monkeypatch.delenv("BUGOWNER_FILE", raising=False)
-    monkeypatch.delenv("BUGOWNER_OUTPUT", raising=False)
+    monkeypatch.setenv("COMPOSE_ORPHANS_TIMEOUT", "60")
+    monkeypatch.delenv("COMPOSE_ORPHANS_PROJECT", raising=False)
+    monkeypatch.delenv("COMPOSE_ORPHANS_FILE", raising=False)
+    monkeypatch.delenv("COMPOSE_ORPHANS_OUTPUT", raising=False)
     cfg = Config.from_env()
     assert cfg.timeout == 60
 
@@ -177,21 +177,21 @@ def test_from_env_reads_bugowner_timeout(monkeypatch: pytest.MonkeyPatch) -> Non
 def test_from_env_bad_timeout_raises_value_error_with_var_name(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setenv("BUGOWNER_TIMEOUT", "not-an-int")
-    monkeypatch.delenv("BUGOWNER_PROJECT", raising=False)
-    monkeypatch.delenv("BUGOWNER_FILE", raising=False)
-    monkeypatch.delenv("BUGOWNER_OUTPUT", raising=False)
-    with pytest.raises(ValueError, match="BUGOWNER_TIMEOUT"):
+    monkeypatch.setenv("COMPOSE_ORPHANS_TIMEOUT", "not-an-int")
+    monkeypatch.delenv("COMPOSE_ORPHANS_PROJECT", raising=False)
+    monkeypatch.delenv("COMPOSE_ORPHANS_FILE", raising=False)
+    monkeypatch.delenv("COMPOSE_ORPHANS_OUTPUT", raising=False)
+    with pytest.raises(ValueError, match="COMPOSE_ORPHANS_TIMEOUT"):
         Config.from_env()
 
 
 def test_from_env_bad_output_raises_value_error_with_output_in_message(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setenv("BUGOWNER_OUTPUT", "yaml")
-    monkeypatch.delenv("BUGOWNER_PROJECT", raising=False)
-    monkeypatch.delenv("BUGOWNER_FILE", raising=False)
-    monkeypatch.delenv("BUGOWNER_TIMEOUT", raising=False)
+    monkeypatch.setenv("COMPOSE_ORPHANS_OUTPUT", "yaml")
+    monkeypatch.delenv("COMPOSE_ORPHANS_PROJECT", raising=False)
+    monkeypatch.delenv("COMPOSE_ORPHANS_FILE", raising=False)
+    monkeypatch.delenv("COMPOSE_ORPHANS_TIMEOUT", raising=False)
     with pytest.raises(ValueError, match="output"):
         Config.from_env()
 
@@ -204,10 +204,10 @@ def test_from_env_bad_output_raises_value_error_with_output_in_message(
 def test_from_env_override_project_beats_env_var(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setenv("BUGOWNER_PROJECT", "SUSE:SLFO:Env")
-    monkeypatch.delenv("BUGOWNER_FILE", raising=False)
-    monkeypatch.delenv("BUGOWNER_OUTPUT", raising=False)
-    monkeypatch.delenv("BUGOWNER_TIMEOUT", raising=False)
+    monkeypatch.setenv("COMPOSE_ORPHANS_PROJECT", "SUSE:SLFO:Env")
+    monkeypatch.delenv("COMPOSE_ORPHANS_FILE", raising=False)
+    monkeypatch.delenv("COMPOSE_ORPHANS_OUTPUT", raising=False)
+    monkeypatch.delenv("COMPOSE_ORPHANS_TIMEOUT", raising=False)
     cfg = Config.from_env(project="SUSE:SLFO:Override")
     assert cfg.project == "SUSE:SLFO:Override"
 
@@ -215,9 +215,9 @@ def test_from_env_override_project_beats_env_var(
 def test_from_env_override_timeout_beats_env_var(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setenv("BUGOWNER_TIMEOUT", "99")
-    monkeypatch.delenv("BUGOWNER_PROJECT", raising=False)
-    monkeypatch.delenv("BUGOWNER_FILE", raising=False)
-    monkeypatch.delenv("BUGOWNER_OUTPUT", raising=False)
+    monkeypatch.setenv("COMPOSE_ORPHANS_TIMEOUT", "99")
+    monkeypatch.delenv("COMPOSE_ORPHANS_PROJECT", raising=False)
+    monkeypatch.delenv("COMPOSE_ORPHANS_FILE", raising=False)
+    monkeypatch.delenv("COMPOSE_ORPHANS_OUTPUT", raising=False)
     cfg = Config.from_env(timeout=15)
     assert cfg.timeout == 15

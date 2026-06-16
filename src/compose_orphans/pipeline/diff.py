@@ -7,11 +7,11 @@ import tempfile
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from bugowner.exceptions import PipelineError, PipelineErrorReason
+from compose_orphans.exceptions import PipelineError, PipelineErrorReason
 
 if TYPE_CHECKING:
-    from bugowner.config import Config
-    from bugowner.runner import Runner
+    from compose_orphans.config import Config
+    from compose_orphans.runner import Runner
 
 DEFAULT_PRODUCTCOMPOSE = Path("000productcompose/default.productcompose")
 _SLES_GIT_URL = "gitea@src.suse.de:products/SLES.git"

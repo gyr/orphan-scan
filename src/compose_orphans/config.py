@@ -8,7 +8,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal
 
-from bugowner.report import VALID_OUTPUTS
+from compose_orphans.report import VALID_OUTPUTS
 
 # OBS project names: alphanumerics, colon, dot, underscore, hyphen; max 255 chars.
 # Rejects path traversal (/../), query injection (?), and shell metacharacters.
@@ -46,38 +46,38 @@ class Config:
         """Build a Config from environment variables, with caller overrides winning.
 
         Reads:
-          BUGOWNER_PROJECT  → project (str)
-          BUGOWNER_FILE     → productcompose_file (Path)
-          BUGOWNER_OUTPUT   → output (str; validated by __post_init__)
-          BUGOWNER_TIMEOUT  → timeout (int; ValueError if not parseable)
+          COMPOSE_ORPHANS_PROJECT  → project (str)
+          COMPOSE_ORPHANS_FILE     → productcompose_file (Path)
+          COMPOSE_ORPHANS_OUTPUT   → output (str; validated by __post_init__)
+          COMPOSE_ORPHANS_TIMEOUT  → timeout (int; ValueError if not parseable)
 
         Keyword overrides (e.g. from CLI flags) beat env vars, which beat defaults.
 
         Raises:
-            ValueError: if BUGOWNER_TIMEOUT is not a valid integer, or if any
+            ValueError: if COMPOSE_ORPHANS_TIMEOUT is not a valid integer, or if any
                         validated field receives an out-of-domain value.
         """
         kwargs: dict[str, object] = {}
 
-        project_env = os.environ.get("BUGOWNER_PROJECT")
+        project_env = os.environ.get("COMPOSE_ORPHANS_PROJECT")
         if project_env is not None:
             kwargs["project"] = project_env
 
-        file_env = os.environ.get("BUGOWNER_FILE")
+        file_env = os.environ.get("COMPOSE_ORPHANS_FILE")
         if file_env is not None:
             kwargs["productcompose_file"] = Path(file_env)
 
-        output_env = os.environ.get("BUGOWNER_OUTPUT")
+        output_env = os.environ.get("COMPOSE_ORPHANS_OUTPUT")
         if output_env is not None:
             kwargs["output"] = output_env
 
-        timeout_env = os.environ.get("BUGOWNER_TIMEOUT")
+        timeout_env = os.environ.get("COMPOSE_ORPHANS_TIMEOUT")
         if timeout_env is not None:
             try:
                 kwargs["timeout"] = int(timeout_env)
             except ValueError as exc:
                 raise ValueError(
-                    f"BUGOWNER_TIMEOUT must be an integer, got {timeout_env!r}"
+                    f"COMPOSE_ORPHANS_TIMEOUT must be an integer, got {timeout_env!r}"
                 ) from exc
 
         kwargs.update(overrides)

@@ -1,4 +1,4 @@
-"""Tests for bugowner.pipeline.diff — resolve_workdir and extract_added_binaries."""
+"""Tests for compose_orphans.pipeline.diff — workdir and binaries."""
 
 from __future__ import annotations
 
@@ -7,9 +7,9 @@ from pathlib import Path
 
 import pytest
 
-from bugowner.config import Config
-from bugowner.exceptions import PipelineError, PipelineErrorReason
-from bugowner.pipeline.diff import extract_added_binaries, resolve_workdir
+from compose_orphans.config import Config
+from compose_orphans.exceptions import PipelineError, PipelineErrorReason
+from compose_orphans.pipeline.diff import extract_added_binaries, resolve_workdir
 
 # ---------------------------------------------------------------------------
 # Fake runner — class-based, records every call, dispatches on argv tuple

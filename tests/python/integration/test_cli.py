@@ -1,4 +1,4 @@
-"""Integration tests for the bugowner CLI (cli.py / __main__.py)."""
+"""Integration tests for the compose-orphans CLI (cli.py / __main__.py)."""
 
 from __future__ import annotations
 
@@ -6,9 +6,13 @@ import json
 
 import pytest
 
-from bugowner.cli import main
-from bugowner.exceptions import NetworkTimeout, PipelineError, PipelineErrorReason
-from bugowner.report import OrphanReport
+from compose_orphans.cli import main
+from compose_orphans.exceptions import (
+    NetworkTimeout,
+    PipelineError,
+    PipelineErrorReason,
+)
+from compose_orphans.report import OrphanReport
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -32,18 +36,18 @@ def _raise(exc: BaseException) -> None:
 
 
 # ---------------------------------------------------------------------------
-# 1. --help exits 0 and stdout contains "bugowner"
+# 1. --help exits 0 and stdout contains "compose-orphans"
 # ---------------------------------------------------------------------------
 
 
-def test_help_exits_zero_and_mentions_bugowner(
+def test_help_exits_zero_and_mentions_compose_orphans(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     with pytest.raises(SystemExit) as exc_info:
         main(["--help"])
     assert exc_info.value.code == 0
     captured = capsys.readouterr()
-    assert "bugowner" in captured.out.lower()
+    assert "compose-orphans" in captured.out.lower()
 
 
 # ---------------------------------------------------------------------------
@@ -58,7 +62,7 @@ def test_version_exits_zero_and_prints_version(
         main(["--version"])
     assert exc_info.value.code == 0
     captured = capsys.readouterr()
-    assert "bugowner" in captured.out.lower()
+    assert "compose-orphans" in captured.out.lower()
 
 
 # ---------------------------------------------------------------------------
@@ -78,7 +82,9 @@ def test_unknown_flag_exits_64() -> None:
 
 
 def test_clean_run_exits_zero(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr("bugowner.cli.check_orphans", lambda *a, **kw: _clean_report())
+    monkeypatch.setattr(
+        "compose_orphans.cli.check_orphans", lambda *a, **kw: _clean_report()
+    )
     with pytest.raises(SystemExit) as exc_info:
         main(["--project", "SUSE:SLFO:Main"])
     assert exc_info.value.code == 0
@@ -90,7 +96,9 @@ def test_clean_run_exits_zero(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 def test_orphans_found_exits_2(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr("bugowner.cli.check_orphans", lambda *a, **kw: _orphan_report())
+    monkeypatch.setattr(
+        "compose_orphans.cli.check_orphans", lambda *a, **kw: _orphan_report()
+    )
     with pytest.raises(SystemExit) as exc_info:
         main(["--project", "SUSE:SLFO:Main"])
     assert exc_info.value.code == 2
@@ -103,7 +111,7 @@ def test_orphans_found_exits_2(monkeypatch: pytest.MonkeyPatch) -> None:
 
 def test_strict_with_failed_binaries_exits_2(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(
-        "bugowner.cli.check_orphans", lambda *a, **kw: _failed_binary_report()
+        "compose_orphans.cli.check_orphans", lambda *a, **kw: _failed_binary_report()
     )
     with pytest.raises(SystemExit) as exc_info:
         main(["--strict"])
@@ -116,7 +124,9 @@ def test_strict_with_failed_binaries_exits_2(monkeypatch: pytest.MonkeyPatch) ->
 
 
 def test_strict_no_failed_binaries_exits_zero(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr("bugowner.cli.check_orphans", lambda *a, **kw: _clean_report())
+    monkeypatch.setattr(
+        "compose_orphans.cli.check_orphans", lambda *a, **kw: _clean_report()
+    )
     with pytest.raises(SystemExit) as exc_info:
         main(["--strict"])
     assert exc_info.value.code == 0
@@ -132,7 +142,9 @@ def test_file_not_found_exits_127_with_stderr_message(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     exc = FileNotFoundError(2, "No such file or directory", "osc")
-    monkeypatch.setattr("bugowner.cli.check_orphans", lambda *a, **kw: _raise(exc))
+    monkeypatch.setattr(
+        "compose_orphans.cli.check_orphans", lambda *a, **kw: _raise(exc)
+    )
     with pytest.raises(SystemExit) as exc_info:
         main([])
     assert exc_info.value.code == 127
@@ -147,7 +159,9 @@ def test_file_not_found_exits_127_with_stderr_message(
 
 def test_network_timeout_exits_124(monkeypatch: pytest.MonkeyPatch) -> None:
     exc = NetworkTimeout("osc-whois", 30.0)
-    monkeypatch.setattr("bugowner.cli.check_orphans", lambda *a, **kw: _raise(exc))
+    monkeypatch.setattr(
+        "compose_orphans.cli.check_orphans", lambda *a, **kw: _raise(exc)
+    )
     with pytest.raises(SystemExit) as exc_info:
         main([])
     assert exc_info.value.code == 124
@@ -160,7 +174,9 @@ def test_network_timeout_exits_124(monkeypatch: pytest.MonkeyPatch) -> None:
 
 def test_pipeline_error_exits_1(monkeypatch: pytest.MonkeyPatch) -> None:
     exc = PipelineError(PipelineErrorReason.NO_PRODUCTCOMPOSE_HISTORY, "no history")
-    monkeypatch.setattr("bugowner.cli.check_orphans", lambda *a, **kw: _raise(exc))
+    monkeypatch.setattr(
+        "compose_orphans.cli.check_orphans", lambda *a, **kw: _raise(exc)
+    )
     with pytest.raises(SystemExit) as exc_info:
         main([])
     assert exc_info.value.code == 1
@@ -173,7 +189,7 @@ def test_pipeline_error_exits_1(monkeypatch: pytest.MonkeyPatch) -> None:
 
 def test_uncaught_exception_exits_1(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(
-        "bugowner.cli.check_orphans",
+        "compose_orphans.cli.check_orphans",
         lambda *a, **kw: _raise(RuntimeError("boom")),
     )
     with pytest.raises(SystemExit) as exc_info:
@@ -190,7 +206,9 @@ def test_output_json_is_valid_json(
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    monkeypatch.setattr("bugowner.cli.check_orphans", lambda *a, **kw: _clean_report())
+    monkeypatch.setattr(
+        "compose_orphans.cli.check_orphans", lambda *a, **kw: _clean_report()
+    )
     with pytest.raises(SystemExit):
         main(["--output", "json"])
     captured = capsys.readouterr()
@@ -200,7 +218,7 @@ def test_output_json_is_valid_json(
 
 
 # ---------------------------------------------------------------------------
-# 13. Env var BUGOWNER_OUTPUT=json is honored (no flag override)
+# 13. Env var COMPOSE_ORPHANS_OUTPUT=json is honored (no flag override)
 # ---------------------------------------------------------------------------
 
 
@@ -208,8 +226,10 @@ def test_env_var_output_json_is_honored(
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    monkeypatch.setenv("BUGOWNER_OUTPUT", "json")
-    monkeypatch.setattr("bugowner.cli.check_orphans", lambda *a, **kw: _clean_report())
+    monkeypatch.setenv("COMPOSE_ORPHANS_OUTPUT", "json")
+    monkeypatch.setattr(
+        "compose_orphans.cli.check_orphans", lambda *a, **kw: _clean_report()
+    )
     with pytest.raises(SystemExit):
         main([])
     captured = capsys.readouterr()
@@ -218,7 +238,7 @@ def test_env_var_output_json_is_honored(
 
 
 # ---------------------------------------------------------------------------
-# 14. Flag --output json overrides env var BUGOWNER_OUTPUT=text
+# 14. Flag --output json overrides env var COMPOSE_ORPHANS_OUTPUT=text
 # ---------------------------------------------------------------------------
 
 
@@ -226,8 +246,10 @@ def test_flag_output_overrides_env_var(
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    monkeypatch.setenv("BUGOWNER_OUTPUT", "text")
-    monkeypatch.setattr("bugowner.cli.check_orphans", lambda *a, **kw: _clean_report())
+    monkeypatch.setenv("COMPOSE_ORPHANS_OUTPUT", "text")
+    monkeypatch.setattr(
+        "compose_orphans.cli.check_orphans", lambda *a, **kw: _clean_report()
+    )
     with pytest.raises(SystemExit):
         main(["--output", "json"])
     captured = capsys.readouterr()
@@ -243,7 +265,9 @@ def test_flag_output_overrides_env_var(
 def test_quiet_flag_sets_warning_level(monkeypatch: pytest.MonkeyPatch) -> None:
     import logging
 
-    monkeypatch.setattr("bugowner.cli.check_orphans", lambda *a, **kw: _clean_report())
+    monkeypatch.setattr(
+        "compose_orphans.cli.check_orphans", lambda *a, **kw: _clean_report()
+    )
     with pytest.raises(SystemExit) as exc_info:
         main(["--quiet"])
     assert exc_info.value.code == 0
@@ -258,7 +282,9 @@ def test_quiet_flag_sets_warning_level(monkeypatch: pytest.MonkeyPatch) -> None:
 def test_verbose_flag_sets_debug_level(monkeypatch: pytest.MonkeyPatch) -> None:
     import logging
 
-    monkeypatch.setattr("bugowner.cli.check_orphans", lambda *a, **kw: _clean_report())
+    monkeypatch.setattr(
+        "compose_orphans.cli.check_orphans", lambda *a, **kw: _clean_report()
+    )
     with pytest.raises(SystemExit) as exc_info:
         main(["--verbose"])
     assert exc_info.value.code == 0
@@ -271,7 +297,9 @@ def test_verbose_flag_sets_debug_level(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 def test_log_format_json_smoke(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr("bugowner.cli.check_orphans", lambda *a, **kw: _clean_report())
+    monkeypatch.setattr(
+        "compose_orphans.cli.check_orphans", lambda *a, **kw: _clean_report()
+    )
     with pytest.raises(SystemExit) as exc_info:
         main(["--log-format", "json"])
     assert exc_info.value.code == 0
@@ -289,7 +317,7 @@ def test_verbose_and_quiet_together_exits_64() -> None:
 
 
 # ---------------------------------------------------------------------------
-# 19. Invalid env var (BUGOWNER_TIMEOUT=bad) → exit 64 with "configuration error"
+# 19. Invalid env var (COMPOSE_ORPHANS_TIMEOUT=bad) → exit 64 with "configuration error"
 # ---------------------------------------------------------------------------
 
 
@@ -297,7 +325,7 @@ def test_invalid_env_var_exits_64_with_config_error(
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    monkeypatch.setenv("BUGOWNER_TIMEOUT", "not-a-number")
+    monkeypatch.setenv("COMPOSE_ORPHANS_TIMEOUT", "not-a-number")
     with pytest.raises(SystemExit) as exc_info:
         main([])
     assert exc_info.value.code == 64

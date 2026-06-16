@@ -1,4 +1,4 @@
-"""Tests for bugowner.network — run_with_timeout single-shot subprocess wrapper."""
+"""Tests for compose_orphans.network — run_with_timeout wrapper."""
 
 from __future__ import annotations
 
@@ -7,13 +7,13 @@ from typing import TYPE_CHECKING
 
 import pytest
 
-from bugowner.exceptions import NetworkTimeout
-from bugowner.network import run_with_timeout
+from compose_orphans.exceptions import NetworkTimeout
+from compose_orphans.network import run_with_timeout
 
 if TYPE_CHECKING:
     from pathlib import Path
 
-    from bugowner.runner import Runner
+    from compose_orphans.runner import Runner
 
 
 # ---------------------------------------------------------------------------

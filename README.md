@@ -1,10 +1,10 @@
-# bugowner — SLES orphan-package detector
+# compose-orphans — SLES orphan-package detector
 
 Detects source packages newly added to the SLES product compose that have no
 maintainer registered in the SLFO maintainership database. Designed to run as a
 CI gate and exit non-zero whenever orphans are found.
 
-Python implementation. For the original shell script see [README-bot.md](README-bot.md).
+Python implementation. Distribution name: `compose-orphans`, import name: `compose_orphans`. For the original shell script see [README-bot.md](README-bot.md).
 
 ## Requirements
 
@@ -27,16 +27,16 @@ uv sync --extra dev
 ### CLI
 
 ```sh
-bugowner                          # detect orphans using defaults
-bugowner --project SUSE:SLFO:Main
-bugowner --output json            # machine-readable output
-bugowner --quiet --output json > orphans.json   # CI usage
+compose-orphans                          # detect orphans using defaults
+compose-orphans --project SUSE:SLFO:Main
+compose-orphans --output json            # machine-readable output
+compose-orphans --quiet --output json > orphans.json   # CI usage
 ```
 
 ### Library
 
 ```python
-from bugowner import check_orphans, Config
+from compose_orphans import check_orphans, Config
 
 report = check_orphans()
 if not report.is_clean():
@@ -47,7 +47,7 @@ if not report.is_clean():
 All pipeline stages accept injectable providers for testing without real subprocess calls:
 
 ```python
-from bugowner import check_orphans, Config
+from compose_orphans import check_orphans, Config
 
 report = check_orphans(
     Config(project="SUSE:SLFO:Main"),
@@ -80,10 +80,10 @@ report = check_orphans(
 | `--version` | — | — | Print version and exit 0 |
 | `--quiet` | — | off | Suppress INFO logs (WARNING and above only) |
 | `--verbose` | — | off | Enable DEBUG logs and per-stage timings |
-| `--project NAME` | `BUGOWNER_PROJECT` | `SUSE:SLFO:Main` | OBS build project |
-| `--file PATH` | `BUGOWNER_FILE` | `000productcompose/default.productcompose` | productcompose path |
-| `--output FORMAT` | `BUGOWNER_OUTPUT` | `text` | `text` or `json` |
-| `--timeout SECS` | `BUGOWNER_TIMEOUT` | `30` | Network timeout in seconds |
+| `--project NAME` | `COMPOSE_ORPHANS_PROJECT` | `SUSE:SLFO:Main` | OBS build project |
+| `--file PATH` | `COMPOSE_ORPHANS_FILE` | `000productcompose/default.productcompose` | productcompose path |
+| `--output FORMAT` | `COMPOSE_ORPHANS_OUTPUT` | `text` | `text` or `json` |
+| `--timeout SECS` | `COMPOSE_ORPHANS_TIMEOUT` | `30` | Network timeout in seconds |
 | `--log-format FORMAT` | — | `text` | `text` or `json` log formatter |
 | `--strict` | — | off | Exit 2 when failed binaries present, even with no orphans |
 
@@ -103,7 +103,7 @@ Flag value beats env var beats default.
 ## Public API
 
 ```python
-from bugowner import (
+from compose_orphans import (
     check_orphans,       # orchestrator — main entry point
     Config,              # runtime configuration dataclass
     OrphanReport,        # immutable result (orphans, checked, failed_binaries)
