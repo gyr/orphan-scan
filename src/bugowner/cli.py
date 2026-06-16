@@ -15,6 +15,7 @@ from bugowner.pipeline import check_orphans
 from bugowner.report import EMITTERS
 
 _VERSION = _pkg_version("bugowner")
+_log = logging.getLogger(__name__)
 
 # EX_USAGE (sysexits.h) — used when argparse would return exit 2
 _EX_USAGE = 64
@@ -136,6 +137,7 @@ def main(argv: list[str] | None = None) -> None:
     except PipelineError:
         sys.exit(1)
     except Exception:  # noqa: BLE001
+        _log.exception("unexpected error")
         sys.exit(1)
 
     emitter = EMITTERS[config.output]
