@@ -1,10 +1,12 @@
-"""Logging formatters: TextFormatter (<ts> [LEVEL] <msg>) and JsonFormatter."""
+"""Logging formatters and setup_logging factory for bugowner."""
 
 from __future__ import annotations
 
 import json
 import logging
+import sys
 import time
+from typing import Literal
 
 
 class TextFormatter(logging.Formatter):
@@ -49,3 +51,27 @@ class JsonFormatter(logging.Formatter):
         if record.exc_info:
             obj["exc"] = self.formatException(record.exc_info)
         return json.dumps(obj, ensure_ascii=False)
+
+
+def setup_logging(
+    level: int = logging.INFO,
+    fmt: Literal["text", "json"] = "text",
+) -> None:
+    """Configure the root logger for bugowner.
+
+    Attaches a single StreamHandler (stderr) with either TextFormatter or
+    JsonFormatter.  Idempotent: replaces any existing handlers on the root
+    logger so repeated calls from tests don't accumulate handlers.
+
+    Args:
+        level: Logging level (e.g. ``logging.DEBUG``, ``logging.INFO``).
+        fmt:   Formatter choice — ``"text"`` or ``"json"``.
+    """
+    root = logging.getLogger()
+    root.setLevel(level)
+    root.handlers.clear()
+    handler = logging.StreamHandler(sys.stderr)
+    handler.setLevel(level)
+    formatter: logging.Formatter = JsonFormatter() if fmt == "json" else TextFormatter()
+    handler.setFormatter(formatter)
+    root.addHandler(handler)
