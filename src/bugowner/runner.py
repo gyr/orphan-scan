@@ -76,6 +76,73 @@ class Runner(Protocol):
     # statically.
 
 
+@runtime_checkable
+class BinaryRunner(Protocol):
+    """Protocol for subprocess calls that must return raw bytes (e.g. git archive).
+
+    Identical to Runner except the return type is CompletedProcess[bytes]
+    (text=False).  The same four security invariants from the module docstring
+    apply: argv is list[str], shell=True is never set, user-influenceable
+    strings travel as separate elements, parent env is inherited.
+
+    Parameters
+    ----------
+    argv:
+        The command and its arguments as a list of strings.  Must never be a
+        single shell string (invariant a).
+    timeout:
+        Maximum wall-clock seconds to wait.  Required.
+    cwd:
+        Working directory for the subprocess.  None means inherit.
+
+    Returns
+    -------
+    subprocess.CompletedProcess[bytes]
+        stdout and stderr are always bytes (text=False); returncode may be non-zero.
+    """
+
+    def __call__(
+        self,
+        argv: list[str],
+        *,
+        timeout: int,
+        cwd: Path | None = None,
+    ) -> subprocess.CompletedProcess[bytes]: ...
+
+
+def default_binary_runner(
+    argv: list[str],
+    *,
+    timeout: int,
+    cwd: Path | None = None,
+) -> subprocess.CompletedProcess[bytes]:
+    """Run argv as a subprocess and return raw bytes output.
+
+    Implements the BinaryRunner protocol with stdlib subprocess.run.  Used
+    where the command produces a binary stream (e.g. git archive tar output)
+    that must not pass through a text codec.
+
+    Same security invariants as default_runner — see module docstring.
+
+    Never raises on non-zero exit (check=False); callers inspect returncode.
+    Raises subprocess.TimeoutExpired if the process exceeds timeout seconds;
+    fetch_maintainership catches that inline and re-raises as NetworkTimeout.
+    """
+    if not isinstance(argv, list):
+        raise TypeError(
+            f"argv must be list[str], got {type(argv).__name__!r}. "
+            "Never pass a shell string — invariant (a)."
+        )
+    return subprocess.run(  # nosec B603 - argv is list[str], shell=True is never set; safe by construction
+        argv,
+        timeout=timeout,
+        cwd=cwd,
+        capture_output=True,
+        text=False,
+        check=False,
+    )
+
+
 def default_runner(
     argv: list[str],
     *,
