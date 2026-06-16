@@ -1,54 +1,91 @@
-# bot.sh — SLES orphan-package detector
+# bugowner — SLES orphan-package detector
 
 Detects source packages newly added to the SLES product compose that have no
 maintainer registered in the SLFO maintainership database. Designed to run as a
-CI gate and exit non-zero whenever orphans are found, so the build system can
-block the merge.
+CI gate and exit non-zero whenever orphans are found.
+
+Python implementation. For the original shell script see [README-bot.md](README-bot.md).
+
+## Requirements
+
+- Python 3.9+
+- [uv](https://docs.astral.sh/uv/) (recommended) or pip
+- `osc` and `git` on PATH (runtime dependencies for OBS/git operations)
 
 ## Installation
 
 ```sh
-# Copy to a directory on PATH
-make install          # installs to /usr/local/bin/bot (requires PREFIX override for local installs)
-make PREFIX=~/.local install
+# Install from source with uv
+uv pip install .
 
-# Or run directly from the checkout
-./bot.sh [OPTIONS]
+# Or in development mode
+uv sync --extra dev
 ```
 
 ## Usage
 
-### From inside an SLES checkout
+### CLI
 
 ```sh
-./bot.sh
+bugowner                          # detect orphans using defaults
+bugowner --project SUSE:SLFO:Main
+bugowner --output json            # machine-readable output
+bugowner --quiet --output json > orphans.json   # CI usage
 ```
 
-### From anywhere (auto-clones SLES)
+### Library
 
-```sh
-./bot.sh                    # clones SLES into a temp dir, cleans up on exit
+```python
+from bugowner import check_orphans, Config
+
+report = check_orphans()
+if not report.is_clean():
+    for pkg in report.orphans:
+        print(pkg)  # source package names
 ```
 
-### In CI — quiet, machine-readable
+All pipeline stages accept injectable providers for testing without real subprocess calls:
 
-```sh
-./bot.sh --quiet --output json > orphans.json
+```python
+from bugowner import check_orphans, Config
+
+report = check_orphans(
+    Config(project="SUSE:SLFO:Main"),
+    runner=my_runner,
+    workdir_provider=my_workdir_fn,
+    binaries_provider=my_binaries_fn,
+    sources_resolver=my_sources_fn,
+    maintainership_provider=my_maintainership_fn,
+)
+```
+
+| Parameter | Signature | Description |
+|---|---|---|
+| `runner` | `(argv, *, timeout, cwd) → CompletedProcess[str]` | Subprocess seam forwarded to the workdir, binaries, and sources stages. Defaults to the real subprocess runner. |
+| `workdir_provider` | `(Config, Runner) → Path` | Resolves the git working directory that contains the productcompose diff to analyse. |
+| `binaries_provider` | `(Path, Config, Runner) → list[str]` | Extracts the names of newly-added binary packages from the working directory. |
+| `sources_resolver` | `(list[str], Config, Runner) → tuple[list[str], list[str]]` | Maps binary names to source package names via OBS. Returns `(resolved, failed)`. |
+| `maintainership_provider` | `(Config, Runner) → dict` | Fetches the SLFO maintainership database. |
+
+> **Note:** `runner` is not forwarded to the maintainership stage — that stage requires
+> a binary-output subprocess protocol internally. To stub maintainership, supply
+> `maintainership_provider` directly.
 ```
 
 ## CLI reference
 
-| Flag | Short | Env var | Default | Description |
-|---|---|---|---|---|
-| `--help` | `-h` | — | — | Show usage and exit 0 |
-| `--version` | `-V` | — | — | Print version and exit 0 |
-| `--quiet` | `-q` | — | off | Suppress INFO logs |
-| `--verbose` | `-v` | — | off | Enable DEBUG logs |
-| `--project NAME` | | `BOT_PROJECT` | `SUSE:SLFO:Main` | IBS build project |
-| `--file PATH` | | `BOT_FILE` | `000productcompose/default.productcompose` | productcompose path |
-| `--output FORMAT` | | `BOT_OUTPUT` | `text` | `text` or `json` |
-| `--timeout SECS` | | `BOT_TIMEOUT` | `30` | Network timeout per attempt |
-| `--retries N` | | `BOT_RETRIES` | `3` | Retry count for network calls |
+| Flag | Env var | Default | Description |
+|---|---|---|---|
+| `--help` | — | — | Show usage and exit 0 |
+| `--version` | — | — | Print version and exit 0 |
+| `--quiet` | — | off | Suppress INFO logs (WARNING and above only) |
+| `--verbose` | — | off | Enable DEBUG logs and per-stage timings |
+| `--project NAME` | `BUGOWNER_PROJECT` | `SUSE:SLFO:Main` | OBS build project |
+| `--file PATH` | `BUGOWNER_FILE` | `000productcompose/default.productcompose` | productcompose path |
+| `--output FORMAT` | `BUGOWNER_OUTPUT` | `text` | `text` or `json` |
+| `--timeout SECS` | `BUGOWNER_TIMEOUT` | `30` | Network timeout in seconds |
+| `--log-format FORMAT` | — | `text` | `text` or `json` log formatter |
+| `--strict` | — | off | Exit 2 when failed binaries present, even with no orphans |
 
 Flag value beats env var beats default.
 
@@ -57,54 +94,39 @@ Flag value beats env var beats default.
 | Code | Meaning |
 |---|---|
 | 0 | Clean — no orphans |
-| 1 | Internal error (`set -e` tripped) |
-| 2 | Orphans found |
+| 1 | Internal or pipeline error |
+| 2 | Orphans found (or failed binaries under `--strict`) |
 | 64 | Bad CLI usage (`EX_USAGE`) |
-| 69 | Preflight failed: missing dep or auth (`EX_UNAVAILABLE`) |
-| 124 | Network call timed out after all retries |
+| 124 | Network call timed out |
+| 127 | Required binary not found (`osc`, `git`) |
 
-## CI integration examples
+## Public API
 
-### Gitea Actions / GitHub Actions
-
-```yaml
-- name: Check for orphaned packages
-  run: ./bot.sh --quiet --output json > orphans.json
-  # Job fails automatically on exit 2 (orphans) or 69 (preflight)
+```python
+from bugowner import (
+    check_orphans,       # orchestrator — main entry point
+    Config,              # runtime configuration dataclass
+    OrphanReport,        # immutable result (orphans, checked, failed_binaries)
+    Runner,              # subprocess protocol — pass a matching callable as runner= to check_orphans
+    BugownerError,       # base exception
+    PipelineError,       # known pipeline failure (reason enum attached)
+    PipelineErrorReason, # enum of failure reasons
+    NetworkTimeout,      # network call exceeded timeout
+)
 ```
-
-### GitLab CI — treat orphans as warning, not blocker
-
-```yaml
-check-orphans:
-  script: ./bot.sh --quiet
-  allow_failure:
-    exit_codes: [2]
-```
-
-### Plain cron / Jenkins
-
-```sh
-make check   # lint + tests
-./bot.sh --quiet || [ $? -eq 2 ]   # succeed even with orphans, fail on errors
-```
-
-## Configuration
-
-All flags have equivalent environment variables (see CLI reference above).
-Additional env vars:
-
-| Variable | Description |
-|---|---|
-| `BOT_TEST_FIXTURES` | Set to any value to enable test fixtures (injects fake binaries/sources). Also skips preflight. |
-| `BOT_FORCE_PREFLIGHT` | Set to `1` to run preflight even when `BOT_TEST_FIXTURES` is set. |
 
 ## Development
 
 ```sh
-make lint    # shellcheck -x bot.sh
-make test    # bats tests/
-make check   # lint + tests (CI entry point)
+uv sync --extra dev          # install all dev dependencies
+
+uv run pytest tests/python/              # run test suite
+uv run pytest tests/python/ --cov        # tests + coverage report
+
+uv run ruff format src/ tests/python/   # auto-format
+uv run ruff check src/ tests/python/    # lint
+uv run mypy src/                         # type check
+uv run bandit -r src/ -q                 # security scan
 ```
 
-Tests use PATH-shim mocks for `osc`, `git`, and `jq` — no real network calls.
+All tool configuration lives in `pyproject.toml`.
