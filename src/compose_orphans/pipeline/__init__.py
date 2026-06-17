@@ -98,6 +98,7 @@ def check_orphans(
     _log.debug(
         "diff stage: done in %.3fs — %d added binaries", _elapsed_diff, len(binaries)
     )
+    _log.info("diff: %d added binaries", len(binaries))
     if binaries:
         _log.debug("diff stage: binaries: %s", binaries)
 
@@ -111,6 +112,7 @@ def check_orphans(
         len(sources),
         len(failed_binaries),
     )
+    _log.info("sources: %d resolved, %d failed", len(sources), len(failed_binaries))
     if sources:
         _log.debug("sources stage: sources: %s", sources)
     if failed_binaries:
@@ -133,6 +135,7 @@ def check_orphans(
     _log.debug(
         "orphans stage: done in %.3fs — %d orphans", _elapsed_orphans, len(orphans)
     )
+    _log.info("found %d orphans", len(orphans))
 
     return OrphanReport(
         orphans=orphans,

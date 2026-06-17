@@ -258,3 +258,56 @@ def test_verbose_debug_logs_emitted_for_each_stage(
     assert not any("diff stage: binaries:" in m for m in empty_msgs)
     assert not any("sources stage: sources:" in m for m in empty_msgs)
     assert not any("unmapped" in m for m in empty_msgs)
+
+
+def test_info_logs_emitted_for_stage_milestones(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """check_orphans emits INFO records for stage milestone counts."""
+    with caplog.at_level(logging.INFO, logger="compose_orphans.pipeline"):
+        check_orphans(
+            config=Config(),
+            runner=_noop_runner,
+            binaries_provider=lambda cfg, run: ["pkg-a", "pkg-b"],
+            sources_resolver=lambda bins, cfg, run: (["src-a"], ["pkg-b"]),
+            maintainership_provider=lambda cfg, run: {
+                "packages": {"src-a": {"users": ["u"], "groups": []}}
+            },
+        )
+    msgs = [r.getMessage() for r in caplog.records if r.levelno == logging.INFO]
+    assert any("diff: 2 added binaries" in m for m in msgs), (
+        f"expected INFO 'diff: 2 added binaries' in: {msgs}"
+    )
+    assert any("sources: 1 resolved" in m for m in msgs), (
+        f"expected INFO 'sources: 1 resolved' in: {msgs}"
+    )
+    assert any("1 failed" in m for m in msgs), f"expected INFO '1 failed' in: {msgs}"
+    assert any("found" in m and "orphan" in m for m in msgs), (
+        f"expected INFO with 'found' and 'orphan' in: {msgs}"
+    )
+
+
+def test_quiet_suppresses_info_logs(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """At WARNING level, no INFO milestone messages are emitted."""
+    with caplog.at_level(logging.WARNING, logger="compose_orphans.pipeline"):
+        check_orphans(
+            config=Config(),
+            runner=_noop_runner,
+            binaries_provider=lambda cfg, run: ["pkg-a", "pkg-b"],
+            sources_resolver=lambda bins, cfg, run: (["src-a"], ["pkg-b"]),
+            maintainership_provider=lambda cfg, run: {
+                "packages": {"src-a": {"users": ["u"], "groups": []}}
+            },
+        )
+    msgs = [r.getMessage() for r in caplog.records if r.levelno == logging.INFO]
+    assert not any("diff: 2 added binaries" in m for m in msgs), (
+        f"expected no diff INFO at WARNING level, got: {msgs}"
+    )
+    assert not any("sources: 1 resolved" in m for m in msgs), (
+        f"expected no sources INFO at WARNING level, got: {msgs}"
+    )
+    assert not any("found" in m and "orphan" in m for m in msgs), (
+        f"expected no orphan INFO at WARNING level, got: {msgs}"
+    )
