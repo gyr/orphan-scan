@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import logging
+import time
 from typing import Callable
 
 from compose_orphans.config import Config
@@ -11,6 +13,8 @@ from compose_orphans.pipeline.orphans import find_orphans
 from compose_orphans.pipeline.sources import resolve_sources
 from compose_orphans.report import OrphanReport
 from compose_orphans.runner import Runner, default_runner
+
+_log = logging.getLogger(__name__)
 
 
 def _default_maintainership_provider(config: Config, runner: Runner) -> dict:  # type: ignore[type-arg]
@@ -87,10 +91,48 @@ def check_orphans(
     if maintainership_provider is None:
         maintainership_provider = _default_maintainership_provider
 
+    _log.debug("diff stage: starting")
+    _t_diff = time.perf_counter()
     binaries = binaries_provider(config, runner)
+    _elapsed_diff = time.perf_counter() - _t_diff
+    _log.debug(
+        "diff stage: done in %.3fs — %d added binaries", _elapsed_diff, len(binaries)
+    )
+    if binaries:
+        _log.debug("diff stage: binaries: %s", binaries)
+
+    _log.debug("sources stage: starting — %d binaries to resolve", len(binaries))
+    _t_sources = time.perf_counter()
     sources, failed_binaries = sources_resolver(binaries, config, runner)
+    _elapsed_sources = time.perf_counter() - _t_sources
+    _log.debug(
+        "sources stage: done in %.3fs — %d resolved, %d failed",
+        _elapsed_sources,
+        len(sources),
+        len(failed_binaries),
+    )
+    if sources:
+        _log.debug("sources stage: sources: %s", sources)
+    if failed_binaries:
+        _log.debug("sources stage: unmapped binaries: %s", failed_binaries)
+
+    _log.debug("maintainership stage: starting")
+    _t_maint = time.perf_counter()
     maintainership = maintainership_provider(config, runner)
+    _elapsed_maint = time.perf_counter() - _t_maint
+    _log.debug(
+        "maintainership stage: done in %.3fs — %d entries",
+        _elapsed_maint,
+        len(maintainership.get("packages", {})),
+    )
+
+    _log.debug("orphans stage: starting — %d sources", len(sources))
+    _t_orphans = time.perf_counter()
     orphans = find_orphans(sources, maintainership)
+    _elapsed_orphans = time.perf_counter() - _t_orphans
+    _log.debug(
+        "orphans stage: done in %.3fs — %d orphans", _elapsed_orphans, len(orphans)
+    )
 
     return OrphanReport(
         orphans=orphans,

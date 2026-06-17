@@ -7,6 +7,7 @@ orchestrator.
 
 from __future__ import annotations
 
+import logging
 from typing import TYPE_CHECKING, Any
 
 import pytest
@@ -218,3 +219,42 @@ def test_custom_runner_is_passed_to_providers() -> None:
     assert received_runners[0] is tracking_runner, (
         "runner was not forwarded to binaries_provider"
     )
+
+
+def test_verbose_debug_logs_emitted_for_each_stage(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """check_orphans emits DEBUG records per stage, including non-empty list details."""
+    with caplog.at_level(logging.DEBUG, logger="compose_orphans.pipeline"):
+        check_orphans(
+            config=Config(),
+            runner=_noop_runner,
+            binaries_provider=lambda cfg, run: ["pkg-a", "pkg-b"],
+            sources_resolver=lambda bins, cfg, run: (["src-a"], ["pkg-b"]),
+            maintainership_provider=lambda cfg, run: {
+                "packages": {"src-a": {"users": ["u"], "groups": []}}
+            },
+        )
+    msgs = [r.getMessage() for r in caplog.records if r.levelno == logging.DEBUG]
+    assert any("diff stage" in m for m in msgs)
+    assert any("sources stage" in m for m in msgs)
+    assert any("maintainership stage" in m for m in msgs)
+    assert any("orphans stage" in m for m in msgs)
+    assert any("diff stage: binaries:" in m for m in msgs)
+    assert any("sources stage: sources:" in m for m in msgs)
+    assert any("unmapped" in m for m in msgs)
+
+    # Empty lists must not produce detail log lines.
+    caplog.clear()
+    with caplog.at_level(logging.DEBUG, logger="compose_orphans.pipeline"):
+        check_orphans(
+            config=Config(),
+            runner=_noop_runner,
+            binaries_provider=lambda cfg, run: [],
+            sources_resolver=lambda bins, cfg, run: ([], []),
+            maintainership_provider=lambda cfg, run: {},
+        )
+    empty_msgs = [r.getMessage() for r in caplog.records if r.levelno == logging.DEBUG]
+    assert not any("diff stage: binaries:" in m for m in empty_msgs)
+    assert not any("sources stage: sources:" in m for m in empty_msgs)
+    assert not any("unmapped" in m for m in empty_msgs)
