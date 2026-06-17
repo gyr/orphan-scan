@@ -17,7 +17,7 @@ _VALID_PROJECT_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9:._-]{0,254}$")
 
 @dataclass(frozen=True)
 class Config:
-    """Frozen, runtime-validated configuration for the bugowner tool.
+    """Frozen, runtime-validated configuration for the compose-orphans tool.
 
     Construct directly for library use; call ``from_env`` for CLI/env-driven use.
     """

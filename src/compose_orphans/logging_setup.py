@@ -1,4 +1,4 @@
-"""Logging formatters and setup_logging factory for bugowner."""
+"""Logging formatters and setup_logging factory for compose-orphans."""
 
 from __future__ import annotations
 
@@ -29,7 +29,7 @@ class TextFormatter(logging.Formatter):
 class JsonFormatter(logging.Formatter):
     """Formats log records as a single JSON object per line (NDJSON).
 
-    Shape: ``{"ts": "...", "level": "INFO", "msg": "...", "logger": "bugowner"}``
+    Shape: ``{"ts": "...", "level": "INFO", "msg": "...", "logger": "compose_orphans"}``
 
     Fields:
         ts:     UTC timestamp in ``%Y-%m-%dT%H:%M:%SZ`` format.
@@ -57,7 +57,7 @@ def setup_logging(
     level: int = logging.INFO,
     fmt: Literal["text", "json"] = "text",
 ) -> None:
-    """Configure the root logger for bugowner.
+    """Configure the root logger for compose-orphans.
 
     Attaches a single StreamHandler (stderr) with either TextFormatter or
     JsonFormatter.  Idempotent: replaces any existing handlers on the root

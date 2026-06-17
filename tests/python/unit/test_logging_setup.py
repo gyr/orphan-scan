@@ -18,7 +18,7 @@ _TS_PATTERN = r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z"
 def _make_record(
     msg: str,
     level: int = logging.INFO,
-    name: str = "bugowner",
+    name: str = "compose_orphans",
 ) -> logging.LogRecord:
     record = logging.LogRecord(
         name=name,
@@ -160,9 +160,9 @@ def test_json_formatter_msg_field_matches_formatted_message() -> None:
 
 def test_json_formatter_logger_field_matches_logger_name() -> None:
     formatter = JsonFormatter()
-    record = _make_record("logger check", name="bugowner")
+    record = _make_record("logger check", name="compose_orphans")
     parsed = json.loads(formatter.format(record))
-    assert parsed["logger"] == "bugowner"
+    assert parsed["logger"] == "compose_orphans"
 
 
 def test_json_formatter_logger_field_reflects_custom_logger_name() -> None:

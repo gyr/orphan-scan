@@ -1,4 +1,4 @@
-"""bugowner — detect orphan source packages in the SLES product compose."""
+"""compose-orphans — detect orphan source packages in the SLES product compose."""
 
 from __future__ import annotations
 
