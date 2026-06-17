@@ -134,9 +134,11 @@ def main(argv: list[str] | None = None) -> None:
         name = exc.filename or str(exc)
         print(f"missing binary: {name}", file=sys.stderr)
         sys.exit(127)
-    except NetworkTimeout:
+    except NetworkTimeout as exc:
+        print(f"error: {exc}", file=sys.stderr)
         sys.exit(124)
-    except PipelineError:
+    except PipelineError as exc:
+        print(f"error: {exc}", file=sys.stderr)
         sys.exit(1)
     except Exception:  # noqa: BLE001
         _log.exception("unexpected error")

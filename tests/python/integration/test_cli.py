@@ -157,7 +157,10 @@ def test_file_not_found_exits_127_with_stderr_message(
 # ---------------------------------------------------------------------------
 
 
-def test_network_timeout_exits_124(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_network_timeout_exits_124(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
     exc = NetworkTimeout("osc-whois", 30.0)
     monkeypatch.setattr(
         "compose_orphans.cli.check_orphans", lambda *a, **kw: _raise(exc)
@@ -165,6 +168,8 @@ def test_network_timeout_exits_124(monkeypatch: pytest.MonkeyPatch) -> None:
     with pytest.raises(SystemExit) as exc_info:
         main([])
     assert exc_info.value.code == 124
+    captured = capsys.readouterr()
+    assert "osc-whois" in captured.err
 
 
 # ---------------------------------------------------------------------------
@@ -172,7 +177,10 @@ def test_network_timeout_exits_124(monkeypatch: pytest.MonkeyPatch) -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_pipeline_error_exits_1(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_pipeline_error_exits_1(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
     exc = PipelineError(PipelineErrorReason.NO_PRODUCTCOMPOSE_HISTORY, "no history")
     monkeypatch.setattr(
         "compose_orphans.cli.check_orphans", lambda *a, **kw: _raise(exc)
@@ -180,6 +188,8 @@ def test_pipeline_error_exits_1(monkeypatch: pytest.MonkeyPatch) -> None:
     with pytest.raises(SystemExit) as exc_info:
         main([])
     assert exc_info.value.code == 1
+    captured = capsys.readouterr()
+    assert "no_productcompose_history" in captured.err
 
 
 # ---------------------------------------------------------------------------
