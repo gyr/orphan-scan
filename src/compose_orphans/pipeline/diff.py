@@ -22,7 +22,8 @@ _SLES_GIT_URL = "gitea@src.suse.de:products/SLES.git"
 #   +    - some-package-name # optional comment
 # Capture group 1 is the package name (stops at first whitespace after name).
 _ADDED_BINARY_RE = re.compile(r"^\+\s+-\s+([A-Za-z0-9]\S*)", re.MULTILINE)
-_SHA_RE = re.compile(r"^[0-9a-f]{40}$")
+# SHA-1 (40 hex) or SHA-256 (64 hex, git ≥2.29 --object-format=sha256).
+_SHA_RE = re.compile(r"^[0-9a-f]{40}$|^[0-9a-f]{64}$")
 
 _PROBE_ARGV_TEMPLATE = ["git", "log", "-1", "--format=%H", "--"]
 

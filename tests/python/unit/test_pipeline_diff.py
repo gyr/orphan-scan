@@ -490,3 +490,19 @@ def test_clone_git_show_failure_raises_pipeline_error(tmp_path: Path) -> None:
     assert exc_info.value.reason == PipelineErrorReason.NO_PRODUCTCOMPOSE_HISTORY
     assert "git show" in str(exc_info.value)
     assert "exit 128" in str(exc_info.value)
+
+
+def test_sha256_repo_probe_takes_happy_path() -> None:
+    """SHA-256 repos emit 64-char hashes; probe must not fall through to clone."""
+    sha256 = "09626d87f7a767e6e4ba8aed9ac8727ad7cffd4cf3cfae92a5033bf6bc096e59"
+    log_argv = _fake_log_argv(DEFAULT_PRODUCTCOMPOSE)
+    show_argv = _fake_show_argv(sha256, DEFAULT_PRODUCTCOMPOSE)
+    runner = FakeRunner(
+        {
+            log_argv: (0, sha256 + "\n"),
+            show_argv: (0, _SAMPLE_DIFF),
+        }
+    )
+    result = extract_added_binaries(_DEFAULT_CONFIG, runner)
+    assert result == _EXPECTED_FROM_SAMPLE
+    assert len(runner.calls) == 2, "clone fallback must not be triggered"
