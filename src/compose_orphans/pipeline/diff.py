@@ -1,9 +1,11 @@
-"""Pipeline stage: resolve_workdir and extract_added_binaries (git + regex)."""
+"""Pipeline stage: extract_added_binaries (git + regex)."""
 
 from __future__ import annotations
 
+import logging
 import re
 import tempfile
+from contextlib import nullcontext
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -20,120 +22,94 @@ _SLES_GIT_URL = "gitea@src.suse.de:products/SLES.git"
 #   +    - some-package-name # optional comment
 # Capture group 1 is the package name (stops at first whitespace after name).
 _ADDED_BINARY_RE = re.compile(r"^\+\s+-\s+([A-Za-z0-9]\S*)", re.MULTILINE)
+_SHA_RE = re.compile(r"^[0-9a-f]{40}$")
 
+_PROBE_ARGV_TEMPLATE = ["git", "log", "-1", "--format=%H", "--"]
 
-def _productcompose_path(workdir: Path, config: Config) -> Path:
-    """Return the productcompose file path for the given workdir and config."""
-    if config.productcompose_file is not None:
-        return config.productcompose_file
-    return workdir / DEFAULT_PRODUCTCOMPOSE
-
-
-def resolve_workdir(
-    config: Config,
-    runner: Runner,
-    _clone_dir: Path | None = None,
-) -> Path:
-    """Locate the SLES checkout workdir (current repo or freshly cloned).
-
-    Runs ``git rev-parse --show-toplevel`` via runner. On success, returns
-    that Path. On failure (not in a git repo), clones SLES via runner into
-    a temp dir and returns that Path. Raises
-    ``PipelineError(NO_PRODUCTCOMPOSE_HISTORY)`` if the clone also fails.
-
-    Parameters
-    ----------
-    config:
-        Runtime configuration (provides the subprocess timeout).
-    runner:
-        Injectable subprocess seam.
-    _clone_dir:
-        Optional override for the clone destination.  If ``None``, a temp
-        directory is created via ``tempfile.mkdtemp()``.  Underscore prefix
-        marks this as non-public API; it exists solely for testability.
-    """
-    revparse_result = runner(
-        ["git", "rev-parse", "--show-toplevel"],
-        timeout=config.timeout,
-    )
-    if revparse_result.returncode == 0:
-        toplevel = Path(revparse_result.stdout.strip()).resolve()
-        return toplevel
-
-    # Not inside a git work-tree — clone the canonical SLES repo.
-    dest = _clone_dir if _clone_dir is not None else Path(tempfile.mkdtemp())
-    clone_result = runner(
-        ["git", "clone", _SLES_GIT_URL, str(dest)],
-        timeout=config.timeout,
-    )
-    if clone_result.returncode != 0:
-        raise PipelineError(
-            PipelineErrorReason.NO_PRODUCTCOMPOSE_HISTORY,
-            f"git clone {_SLES_GIT_URL!r} failed (exit {clone_result.returncode})"
-            + (
-                f": {clone_result.stderr.strip()}"
-                if clone_result.stderr.strip()
-                else ""
-            ),
-        )
-    return dest
+_log = logging.getLogger(__name__)
 
 
 def extract_added_binaries(
-    workdir: Path,
     config: Config,
     runner: Runner,
+    _clone_dir: Path | None = None,
 ) -> list[str]:
     """Return sorted unique package names added in the most recent commit.
 
-    Inspects the most recent productcompose commit.
-
-    Steps:
-
-    1. ``git log -1 --format=%H -- <productcompose_file>`` (cwd=workdir)
-    2. If stdout is empty or returncode is non-zero →
-       raise ``PipelineError(NO_PRODUCTCOMPOSE_HISTORY, ...)``.
-    3. ``git show <sha> -- <productcompose_file>`` (cwd=workdir)
-    4. Regex-parse lines matching ``r'^\\+\\s+-\\s+([A-Za-z0-9]\\S*)`` →
-       capture group 1 (package name, comment-stripped by ``\\S*`` stopping at
-       whitespace).
-    5. Return ``sorted(set(matches))``.
+    Probes SLES-repo membership inline via ``git log -1 --format=%H``.
+    Non-zero exit or empty SHA triggers the clone fallback, which logs at
+    WARNING before cloning.
 
     Parameters
     ----------
-    workdir:
-        Root of the SLES git checkout (from :func:`resolve_workdir`).
     config:
         Runtime configuration.
     runner:
         Injectable subprocess seam.
+    _clone_dir:
+        Test seam — when set, the function uses this path instead of a
+        ``tempfile.TemporaryDirectory`` for the clone fallback.  Underscore
+        prefix marks this as non-public API.
     """
-    pc_path = _productcompose_path(workdir, config)
+    pc_path = config.productcompose_file or DEFAULT_PRODUCTCOMPOSE
+    probe_argv = [*_PROBE_ARGV_TEMPLATE, str(pc_path)]
 
-    log_result = runner(
-        ["git", "log", "-1", "--format=%H", "--", str(pc_path)],
-        timeout=config.timeout,
-        cwd=workdir,
-    )
-    sha = log_result.stdout.strip()
-    if log_result.returncode != 0 or not sha:
-        raise PipelineError(
-            PipelineErrorReason.NO_PRODUCTCOMPOSE_HISTORY,
-            f"no commits touch {pc_path} (exit {log_result.returncode})",
+    # Step 1: probe current directory
+    probe = runner(probe_argv, timeout=config.timeout, cwd=None)
+    sha = probe.stdout.strip()
+
+    if probe.returncode != 0 or not sha or not _SHA_RE.fullmatch(sha):
+        # Step 2: clone fallback
+        _log.warning("Not in SLES git checkout; cloning %s", _SLES_GIT_URL)
+        cm = (
+            nullcontext(_clone_dir)
+            if _clone_dir is not None
+            else tempfile.TemporaryDirectory()
         )
+        with cm as tmpdir:
+            dest = Path(tmpdir)
+            clone = runner(
+                ["git", "clone", _SLES_GIT_URL, str(dest)],
+                timeout=config.timeout,
+            )
+            if clone.returncode != 0:
+                raise PipelineError(
+                    PipelineErrorReason.NO_PRODUCTCOMPOSE_HISTORY,
+                    f"git clone {_SLES_GIT_URL!r} failed (exit {clone.returncode})"
+                    + (f": {clone.stderr.strip()}" if clone.stderr.strip() else ""),
+                ) from None
 
-    show_result = runner(
+            probe2 = runner(probe_argv, timeout=config.timeout, cwd=dest)
+            sha = probe2.stdout.strip()
+            if probe2.returncode != 0 or not sha or not _SHA_RE.fullmatch(sha):
+                raise PipelineError(
+                    PipelineErrorReason.NO_PRODUCTCOMPOSE_HISTORY,
+                    f"no commits touch {pc_path} in cloned repo",
+                ) from None
+
+            show = runner(
+                ["git", "show", sha, "--", str(pc_path)],
+                timeout=config.timeout,
+                cwd=dest,
+            )
+            if show.returncode != 0:
+                raise PipelineError(
+                    PipelineErrorReason.NO_PRODUCTCOMPOSE_HISTORY,
+                    f"git show {sha!r} failed (exit {show.returncode})"
+                    + (f": {show.stderr.strip()}" if show.stderr.strip() else ""),
+                ) from None
+            return sorted(set(_ADDED_BINARY_RE.findall(show.stdout)))
+
+    # Step 3: happy path — in SLES repo, sha known
+    show = runner(
         ["git", "show", sha, "--", str(pc_path)],
         timeout=config.timeout,
-        cwd=workdir,
+        cwd=None,
     )
-    if show_result.returncode != 0:
+    if show.returncode != 0:
         raise PipelineError(
             PipelineErrorReason.NO_PRODUCTCOMPOSE_HISTORY,
-            f"git show {sha!r} failed (exit {show_result.returncode})",
-        )
-
-    # Returned strings may contain non-alphanumeric chars (e.g. '-', '_', '.').
-    # Callers must NOT shell-interpolate; pass as argv list elements only.
-    matches = _ADDED_BINARY_RE.findall(show_result.stdout)
-    return sorted(set(matches))
+            f"git show {sha!r} failed (exit {show.returncode})"
+            + (f": {show.stderr.strip()}" if show.stderr.strip() else ""),
+        ) from None
+    return sorted(set(_ADDED_BINARY_RE.findall(show.stdout)))

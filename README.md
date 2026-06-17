@@ -52,7 +52,6 @@ from compose_orphans import check_orphans, Config
 report = check_orphans(
     Config(project="SUSE:SLFO:Main"),
     runner=my_runner,
-    workdir_provider=my_workdir_fn,
     binaries_provider=my_binaries_fn,
     sources_resolver=my_sources_fn,
     maintainership_provider=my_maintainership_fn,
@@ -61,9 +60,8 @@ report = check_orphans(
 
 | Parameter | Signature | Description |
 |---|---|---|
-| `runner` | `(argv, *, timeout, cwd) → CompletedProcess[str]` | Subprocess seam forwarded to the workdir, binaries, and sources stages. Defaults to the real subprocess runner. |
-| `workdir_provider` | `(Config, Runner) → Path` | Resolves the git working directory that contains the productcompose diff to analyse. |
-| `binaries_provider` | `(Path, Config, Runner) → list[str]` | Extracts the names of newly-added binary packages from the working directory. |
+| `runner` | `(argv, *, timeout, cwd) → CompletedProcess[str]` | Subprocess seam forwarded to the binaries and sources stages. Defaults to the real subprocess runner. |
+| `binaries_provider` | `(Config, Runner) → list[str]` | Extracts the names of newly-added binary packages. |
 | `sources_resolver` | `(list[str], Config, Runner) → tuple[list[str], list[str]]` | Maps binary names to source package names via OBS. Returns `(resolved, failed)`. |
 | `maintainership_provider` | `(Config, Runner) → dict` | Fetches the SLFO maintainership database. |
 

@@ -7,7 +7,6 @@ orchestrator.
 
 from __future__ import annotations
 
-from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 import pytest
@@ -23,13 +22,13 @@ from compose_orphans.report import OrphanReport
 
 if TYPE_CHECKING:
     import subprocess
+    from pathlib import Path
 
 
 # ---------------------------------------------------------------------------
 # Shared fixtures / helpers
 # ---------------------------------------------------------------------------
 
-_WORKDIR = Path("/fake/workdir")
 _NO_ORPHAN_MAINTAINERSHIP: dict[str, Any] = {
     "packages": {
         "pkg-a": {"users": ["alice"], "groups": []},
@@ -55,8 +54,7 @@ def test_clean_run_returns_clean_report() -> None:
     report = check_orphans(
         Config(),
         runner=_noop_runner,
-        workdir_provider=lambda cfg, run: _WORKDIR,
-        binaries_provider=lambda wd, cfg, run: ["bin-a", "bin-b"],
+        binaries_provider=lambda cfg, run: ["bin-a", "bin-b"],
         sources_resolver=lambda bins, cfg, run: (["pkg-a", "pkg-b"], []),
         maintainership_provider=lambda cfg, run: _NO_ORPHAN_MAINTAINERSHIP,
     )
@@ -72,8 +70,7 @@ def test_orphans_found_in_report() -> None:
     report = check_orphans(
         Config(),
         runner=_noop_runner,
-        workdir_provider=lambda cfg, run: _WORKDIR,
-        binaries_provider=lambda wd, cfg, run: ["bin-x"],
+        binaries_provider=lambda cfg, run: ["bin-x"],
         sources_resolver=lambda bins, cfg, run: (["pkg-missing"], []),
         maintainership_provider=lambda cfg, run: {"packages": {}},
     )
@@ -87,8 +84,7 @@ def test_failed_binaries_propagated() -> None:
     report = check_orphans(
         Config(),
         runner=_noop_runner,
-        workdir_provider=lambda cfg, run: _WORKDIR,
-        binaries_provider=lambda wd, cfg, run: ["bin-bar"],
+        binaries_provider=lambda cfg, run: ["bin-bar"],
         sources_resolver=lambda bins, cfg, run: ([], ["bin-bar"]),
         maintainership_provider=lambda cfg, run: {"packages": {}},
     )
@@ -102,8 +98,7 @@ def test_checked_count_equals_source_count() -> None:
     report = check_orphans(
         Config(),
         runner=_noop_runner,
-        workdir_provider=lambda cfg, run: _WORKDIR,
-        binaries_provider=lambda wd, cfg, run: ["b1", "b2", "b3"],
+        binaries_provider=lambda cfg, run: ["b1", "b2", "b3"],
         sources_resolver=lambda bins, cfg, run: (["s1", "s2", "s3"], []),
         maintainership_provider=lambda cfg, run: {
             "packages": {
@@ -121,8 +116,7 @@ def test_none_config_uses_defaults() -> None:
     """Calling check_orphans() with no config uses Config() defaults."""
     report = check_orphans(
         runner=_noop_runner,
-        workdir_provider=lambda cfg, run: _WORKDIR,
-        binaries_provider=lambda wd, cfg, run: [],
+        binaries_provider=lambda cfg, run: [],
         sources_resolver=lambda bins, cfg, run: ([], []),
         maintainership_provider=lambda cfg, run: {"packages": {}},
     )
@@ -130,18 +124,17 @@ def test_none_config_uses_defaults() -> None:
     assert isinstance(report, OrphanReport)
 
 
-def _raise_pipeline_error(cfg: Config, run: Any) -> Path:
+def _raise_pipeline_error_bp(cfg: Config, run: Any) -> list[str]:
     raise PipelineError(PipelineErrorReason.NO_PRODUCTCOMPOSE_HISTORY, "no hist")
 
 
 def test_pipeline_error_propagates() -> None:
-    """workdir_provider raising PipelineError propagates unchanged."""
+    """binaries_provider raising PipelineError propagates unchanged."""
     with pytest.raises(PipelineError) as exc_info:
         check_orphans(
             Config(),
             runner=_noop_runner,
-            workdir_provider=_raise_pipeline_error,
-            binaries_provider=lambda wd, cfg, run: [],
+            binaries_provider=_raise_pipeline_error_bp,
             sources_resolver=lambda bins, cfg, run: ([], []),
             maintainership_provider=lambda cfg, run: {"packages": {}},
         )
@@ -159,8 +152,7 @@ def test_network_timeout_propagates() -> None:
         check_orphans(
             Config(),
             runner=_noop_runner,
-            workdir_provider=lambda cfg, run: _WORKDIR,
-            binaries_provider=lambda wd, cfg, run: ["bin-z"],
+            binaries_provider=lambda cfg, run: ["bin-z"],
             sources_resolver=lambda bins, cfg, run: (["pkg-z"], []),
             maintainership_provider=_raise_timeout,
         )
@@ -188,8 +180,7 @@ def test_empty_binaries_returns_clean_report() -> None:
     report = check_orphans(
         Config(),
         runner=_noop_runner,
-        workdir_provider=lambda cfg, run: _WORKDIR,
-        binaries_provider=lambda wd, cfg, run: [],
+        binaries_provider=lambda cfg, run: [],
         sources_resolver=lambda bins, cfg, run: ([], []),
         maintainership_provider=lambda cfg, run: {"packages": {}},
     )
@@ -211,20 +202,19 @@ def test_custom_runner_is_passed_to_providers() -> None:
 
     received_runners: list[Any] = []
 
-    def workdir_provider_spy(cfg: Config, run: Any) -> Path:
+    def binaries_provider_spy(cfg: Config, run: Any) -> list[str]:
         received_runners.append(run)
-        return _WORKDIR
+        return []
 
     check_orphans(
         Config(),
         runner=tracking_runner,
-        workdir_provider=workdir_provider_spy,
-        binaries_provider=lambda wd, cfg, run: [],
+        binaries_provider=binaries_provider_spy,
         sources_resolver=lambda bins, cfg, run: ([], []),
         maintainership_provider=lambda cfg, run: {"packages": {}},
     )
 
-    assert received_runners, "workdir_provider was never called"
+    assert received_runners, "binaries_provider was never called"
     assert received_runners[0] is tracking_runner, (
-        "runner was not forwarded to workdir_provider"
+        "runner was not forwarded to binaries_provider"
     )

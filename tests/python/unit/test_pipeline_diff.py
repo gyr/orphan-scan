@@ -1,4 +1,4 @@
-"""Tests for compose_orphans.pipeline.diff — workdir and binaries."""
+"""Tests for compose_orphans.pipeline.diff — extract_added_binaries."""
 
 from __future__ import annotations
 
@@ -9,18 +9,32 @@ import pytest
 
 from compose_orphans.config import Config
 from compose_orphans.exceptions import PipelineError, PipelineErrorReason
-from compose_orphans.pipeline.diff import extract_added_binaries, resolve_workdir
+from compose_orphans.pipeline.diff import (
+    _SLES_GIT_URL,
+    DEFAULT_PRODUCTCOMPOSE,
+    extract_added_binaries,
+)
 
 # ---------------------------------------------------------------------------
 # Fake runner — class-based, records every call, dispatches on argv tuple
 # ---------------------------------------------------------------------------
 
-_REVPARSE_ARGV = ("git", "rev-parse", "--show-toplevel")
-_CLONE_URL = "gitea@src.suse.de:products/SLES.git"
-
 
 class FakeRunner:
-    def __init__(self, responses: dict[tuple[str, ...], tuple[int, str]]) -> None:
+    """Fake subprocess runner for tests.
+
+    Dispatch priority:
+    1. ``(tuple(argv), cwd)`` — exact match with cwd.
+    2. ``tuple(argv)`` — argv-only match (cwd ignored).
+    3. Default: returncode=0, stdout="".
+    """
+
+    def __init__(
+        self,
+        responses: dict[
+            tuple[str, ...] | tuple[tuple[str, ...], Path | None], tuple[int, str]
+        ],
+    ) -> None:
         self.calls: list[dict[str, object]] = []
         self._responses = responses
 
@@ -32,9 +46,12 @@ class FakeRunner:
         cwd: Path | None = None,
     ) -> subprocess.CompletedProcess[str]:
         self.calls.append({"argv": argv, "timeout": timeout, "cwd": cwd})
-        key = tuple(argv)
-        if key in self._responses:
-            code, out = self._responses[key]
+        argv_key = tuple(argv)
+        cwd_key = (argv_key, cwd)
+        if cwd_key in self._responses:
+            code, out = self._responses[cwd_key]  # type: ignore[index]
+        elif argv_key in self._responses:
+            code, out = self._responses[argv_key]  # type: ignore[index]
         else:
             code, out = 0, ""
         return subprocess.CompletedProcess(argv, code, out, "")
@@ -45,7 +62,21 @@ class FakeRunner:
 # ---------------------------------------------------------------------------
 
 _DEFAULT_CONFIG = Config()
-_FAKE_SHA = "abc123deadbeef"
+_FAKE_SHA = "deadbeefdeadbeefdeadbeefdeadbeefdeadbeef"
+
+# Probe argv template (argv-only key, no cwd)
+_PROBE_ARGV_HEAD = (
+    "git",
+    "log",
+    "-1",
+    "--format=%H",
+    "--",
+    str(DEFAULT_PRODUCTCOMPOSE),
+)
+
+# A minimal sample diff containing one added package
+_SAMPLE_DIFF = "+    - sample-pkg\n"
+_EXPECTED_FROM_SAMPLE = ["sample-pkg"]
 
 
 def _fake_log_argv(productcompose_path: Path) -> tuple[str, ...]:
@@ -57,152 +88,27 @@ def _fake_show_argv(sha: str, productcompose_path: Path) -> tuple[str, ...]:
 
 
 # ---------------------------------------------------------------------------
-# resolve_workdir — Cycle 1: inside a git repo returns toplevel path
-# ---------------------------------------------------------------------------
-
-
-def test_resolve_workdir_in_git_repo_returns_toplevel_path(
-    tmp_path: Path,
-) -> None:
-    """When git rev-parse succeeds, returns the stripped toplevel path."""
-    runner = FakeRunner({_REVPARSE_ARGV: (0, "/repo/root\n")})
-    # productcompose must exist so the function considers the repo valid
-    productcompose = tmp_path / "000productcompose" / "default.productcompose"
-    productcompose.parent.mkdir(parents=True)
-    productcompose.touch()
-    config = Config(productcompose_file=productcompose)
-    result = resolve_workdir(config, runner)
-    assert result == Path("/repo/root")
-
-
-# ---------------------------------------------------------------------------
-# resolve_workdir — Cycle 2: not in git repo → clones and returns clone_dir
-# ---------------------------------------------------------------------------
-
-
-def test_resolve_workdir_not_in_git_repo_clones_and_returns_clone_dir(
-    tmp_path: Path,
-) -> None:
-    """When rev-parse fails, clones SLES into _clone_dir and returns it."""
-    clone_dir = tmp_path / "SLES"
-    clone_argv = ("git", "clone", _CLONE_URL, str(clone_dir))
-    runner = FakeRunner(
-        {
-            _REVPARSE_ARGV: (1, ""),
-            clone_argv: (0, ""),
-        }
-    )
-    result = resolve_workdir(_DEFAULT_CONFIG, runner, _clone_dir=clone_dir)
-    assert result == clone_dir
-
-
-# ---------------------------------------------------------------------------
-# resolve_workdir — Cycle 3: clone failure raises PipelineError
-# ---------------------------------------------------------------------------
-
-
-def test_resolve_workdir_clone_failure_raises_pipeline_error(
-    tmp_path: Path,
-) -> None:
-    """When git clone also fails, raises PipelineError(NO_PRODUCTCOMPOSE_HISTORY)."""
-    clone_dir = tmp_path / "SLES"
-    clone_argv = ("git", "clone", _CLONE_URL, str(clone_dir))
-    runner = FakeRunner(
-        {
-            _REVPARSE_ARGV: (1, ""),
-            clone_argv: (1, ""),
-        }
-    )
-    with pytest.raises(PipelineError) as exc_info:
-        resolve_workdir(_DEFAULT_CONFIG, runner, _clone_dir=clone_dir)
-    assert exc_info.value.reason == PipelineErrorReason.NO_PRODUCTCOMPOSE_HISTORY
-
-
-# ---------------------------------------------------------------------------
-# resolve_workdir — Cycle 4: git rev-parse argv is exact
-# ---------------------------------------------------------------------------
-
-
-def test_resolve_workdir_git_revparse_argv_is_exact(tmp_path: Path) -> None:
-    """Runner receives exactly ['git', 'rev-parse', '--show-toplevel']."""
-    productcompose = tmp_path / "000productcompose" / "default.productcompose"
-    productcompose.parent.mkdir(parents=True)
-    productcompose.touch()
-    config = Config(productcompose_file=productcompose)
-    runner = FakeRunner({_REVPARSE_ARGV: (0, str(tmp_path) + "\n")})
-    resolve_workdir(config, runner)
-    assert runner.calls[0]["argv"] == list(_REVPARSE_ARGV)
-
-
-# ---------------------------------------------------------------------------
-# resolve_workdir — Cycle 5: git clone argv is exact
-# ---------------------------------------------------------------------------
-
-
-def test_resolve_workdir_git_clone_argv_is_exact(tmp_path: Path) -> None:
-    """Runner receives exactly ['git', 'clone', <url>, str(clone_dir)]."""
-    clone_dir = tmp_path / "SLES"
-    clone_argv = ("git", "clone", _CLONE_URL, str(clone_dir))
-    runner = FakeRunner(
-        {
-            _REVPARSE_ARGV: (1, ""),
-            clone_argv: (0, ""),
-        }
-    )
-    resolve_workdir(_DEFAULT_CONFIG, runner, _clone_dir=clone_dir)
-    clone_call = runner.calls[1]
-    assert clone_call["argv"] == ["git", "clone", _CLONE_URL, str(clone_dir)]
-
-
-# ---------------------------------------------------------------------------
-# extract_added_binaries — Cycle 6: empty SHA raises PipelineError
-# ---------------------------------------------------------------------------
-
-
-def test_extract_added_binaries_empty_sha_raises_pipeline_error(
-    tmp_path: Path,
-) -> None:
-    """Empty git log stdout raises PipelineError(NO_PRODUCTCOMPOSE_HISTORY)."""
-    workdir = tmp_path
-    productcompose = workdir / "000productcompose" / "default.productcompose"
-    productcompose.parent.mkdir(parents=True)
-    productcompose.touch()
-    log_argv = _fake_log_argv(productcompose)
-    runner = FakeRunner({log_argv: (0, "")})
-    config = Config(productcompose_file=productcompose)
-    with pytest.raises(PipelineError) as exc_info:
-        extract_added_binaries(workdir, config, runner)
-    assert exc_info.value.reason == PipelineErrorReason.NO_PRODUCTCOMPOSE_HISTORY
-    assert "no commits" in str(exc_info.value)
-
-
-# ---------------------------------------------------------------------------
 # extract_added_binaries — Cycle 7: git log argv is exact
 # ---------------------------------------------------------------------------
 
 
-def test_extract_added_binaries_git_log_argv_is_exact(tmp_path: Path) -> None:
-    """Runner receives git log argv with cwd=workdir.
+def test_extract_added_binaries_git_log_argv_is_exact() -> None:
+    """Runner receives git log argv with cwd=None.
 
     Expected: ['git', 'log', '-1', '--format=%H', '--', <path>].
     """
-    workdir = tmp_path
-    productcompose = workdir / "000productcompose" / "default.productcompose"
-    productcompose.parent.mkdir(parents=True)
-    productcompose.touch()
-    log_argv = _fake_log_argv(productcompose)
-    show_argv = _fake_show_argv(_FAKE_SHA, productcompose)
+    log_argv = _fake_log_argv(DEFAULT_PRODUCTCOMPOSE)
+    show_argv = _fake_show_argv(_FAKE_SHA, DEFAULT_PRODUCTCOMPOSE)
     runner = FakeRunner(
         {
             log_argv: (0, _FAKE_SHA + "\n"),
             show_argv: (0, ""),
         }
     )
-    config = Config(productcompose_file=productcompose)
-    extract_added_binaries(workdir, config, runner)
+    extract_added_binaries(_DEFAULT_CONFIG, runner)
     log_call = runner.calls[0]
     assert log_call["argv"] == list(log_argv)
-    assert log_call["cwd"] == workdir
+    assert log_call["cwd"] is None
 
 
 # ---------------------------------------------------------------------------
@@ -210,25 +116,26 @@ def test_extract_added_binaries_git_log_argv_is_exact(tmp_path: Path) -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_extract_added_binaries_git_show_argv_is_exact(tmp_path: Path) -> None:
-    """Runner receives ['git', 'show', <sha>, '--', <path>] with cwd=workdir."""
-    workdir = tmp_path
-    productcompose = workdir / "000productcompose" / "default.productcompose"
-    productcompose.parent.mkdir(parents=True)
-    productcompose.touch()
-    log_argv = _fake_log_argv(productcompose)
-    show_argv = _fake_show_argv(_FAKE_SHA, productcompose)
+def test_extract_added_binaries_git_show_argv_is_exact() -> None:
+    """Runner receives ['git', 'show', <sha>, '--', <path>] with cwd=None."""
+    log_argv = _fake_log_argv(DEFAULT_PRODUCTCOMPOSE)
+    show_argv = _fake_show_argv(_FAKE_SHA, DEFAULT_PRODUCTCOMPOSE)
     runner = FakeRunner(
         {
             log_argv: (0, _FAKE_SHA + "\n"),
             show_argv: (0, ""),
         }
     )
-    config = Config(productcompose_file=productcompose)
-    extract_added_binaries(workdir, config, runner)
+    extract_added_binaries(_DEFAULT_CONFIG, runner)
     show_call = runner.calls[1]
-    assert show_call["argv"] == ["git", "show", _FAKE_SHA, "--", str(productcompose)]
-    assert show_call["cwd"] == workdir
+    assert show_call["argv"] == [
+        "git",
+        "show",
+        _FAKE_SHA,
+        "--",
+        str(DEFAULT_PRODUCTCOMPOSE),
+    ]
+    assert show_call["cwd"] is None
 
 
 # ---------------------------------------------------------------------------
@@ -273,25 +180,18 @@ _EXPECTED_BINARIES = [
 ]
 
 
-def test_extract_added_binaries_golden_test_against_real_diff_patch(
-    tmp_path: Path,
-) -> None:
+def test_extract_added_binaries_golden_test_against_real_diff_patch() -> None:
     """Parsing real_diff.patch yields exactly the expected 30 package names."""
     patch_content = _FIXTURE_PATH.read_text()
-    workdir = tmp_path
-    productcompose = workdir / "000productcompose" / "default.productcompose"
-    productcompose.parent.mkdir(parents=True)
-    productcompose.touch()
-    log_argv = _fake_log_argv(productcompose)
-    show_argv = _fake_show_argv(_FAKE_SHA, productcompose)
+    log_argv = _fake_log_argv(DEFAULT_PRODUCTCOMPOSE)
+    show_argv = _fake_show_argv(_FAKE_SHA, DEFAULT_PRODUCTCOMPOSE)
     runner = FakeRunner(
         {
             log_argv: (0, _FAKE_SHA + "\n"),
             show_argv: (0, patch_content),
         }
     )
-    config = Config(productcompose_file=productcompose)
-    result = extract_added_binaries(workdir, config, runner)
+    result = extract_added_binaries(_DEFAULT_CONFIG, runner)
     assert result == _EXPECTED_BINARIES
 
 
@@ -300,25 +200,18 @@ def test_extract_added_binaries_golden_test_against_real_diff_patch(
 # ---------------------------------------------------------------------------
 
 
-def test_extract_added_binaries_removed_lines_not_included(
-    tmp_path: Path,
-) -> None:
+def test_extract_added_binaries_removed_lines_not_included() -> None:
     """Lines starting with '-    - pkg' (removals) must not be returned."""
     diff = "-    - removed-pkg\n-    - another-removed\n"
-    workdir = tmp_path
-    productcompose = workdir / "000productcompose" / "default.productcompose"
-    productcompose.parent.mkdir(parents=True)
-    productcompose.touch()
-    log_argv = _fake_log_argv(productcompose)
-    show_argv = _fake_show_argv(_FAKE_SHA, productcompose)
+    log_argv = _fake_log_argv(DEFAULT_PRODUCTCOMPOSE)
+    show_argv = _fake_show_argv(_FAKE_SHA, DEFAULT_PRODUCTCOMPOSE)
     runner = FakeRunner(
         {
             log_argv: (0, _FAKE_SHA + "\n"),
             show_argv: (0, diff),
         }
     )
-    config = Config(productcompose_file=productcompose)
-    result = extract_added_binaries(workdir, config, runner)
+    result = extract_added_binaries(_DEFAULT_CONFIG, runner)
     assert result == []
 
 
@@ -327,9 +220,7 @@ def test_extract_added_binaries_removed_lines_not_included(
 # ---------------------------------------------------------------------------
 
 
-def test_extract_added_binaries_diff_metadata_lines_not_included(
-    tmp_path: Path,
-) -> None:
+def test_extract_added_binaries_diff_metadata_lines_not_included() -> None:
     """Header lines (---, +++, @@) must not be included in results."""
     diff = (
         "--- a/000productcompose/default.productcompose\n"
@@ -337,20 +228,15 @@ def test_extract_added_binaries_diff_metadata_lines_not_included(
         "@@ -1,3 +1,4 @@\n"
         "+    - real-pkg\n"
     )
-    workdir = tmp_path
-    productcompose = workdir / "000productcompose" / "default.productcompose"
-    productcompose.parent.mkdir(parents=True)
-    productcompose.touch()
-    log_argv = _fake_log_argv(productcompose)
-    show_argv = _fake_show_argv(_FAKE_SHA, productcompose)
+    log_argv = _fake_log_argv(DEFAULT_PRODUCTCOMPOSE)
+    show_argv = _fake_show_argv(_FAKE_SHA, DEFAULT_PRODUCTCOMPOSE)
     runner = FakeRunner(
         {
             log_argv: (0, _FAKE_SHA + "\n"),
             show_argv: (0, diff),
         }
     )
-    config = Config(productcompose_file=productcompose)
-    result = extract_added_binaries(workdir, config, runner)
+    result = extract_added_binaries(_DEFAULT_CONFIG, runner)
     assert result == ["real-pkg"]
 
 
@@ -359,25 +245,18 @@ def test_extract_added_binaries_diff_metadata_lines_not_included(
 # ---------------------------------------------------------------------------
 
 
-def test_extract_added_binaries_trailing_comment_stripped(
-    tmp_path: Path,
-) -> None:
+def test_extract_added_binaries_trailing_comment_stripped() -> None:
     """Package name on a line with a trailing # comment is captured without it."""
     diff = "+    - NetworkManager-connection-editor # epic=NetworkManager\n"
-    workdir = tmp_path
-    productcompose = workdir / "000productcompose" / "default.productcompose"
-    productcompose.parent.mkdir(parents=True)
-    productcompose.touch()
-    log_argv = _fake_log_argv(productcompose)
-    show_argv = _fake_show_argv(_FAKE_SHA, productcompose)
+    log_argv = _fake_log_argv(DEFAULT_PRODUCTCOMPOSE)
+    show_argv = _fake_show_argv(_FAKE_SHA, DEFAULT_PRODUCTCOMPOSE)
     runner = FakeRunner(
         {
             log_argv: (0, _FAKE_SHA + "\n"),
             show_argv: (0, diff),
         }
     )
-    config = Config(productcompose_file=productcompose)
-    result = extract_added_binaries(workdir, config, runner)
+    result = extract_added_binaries(_DEFAULT_CONFIG, runner)
     assert result == ["NetworkManager-connection-editor"]
 
 
@@ -386,44 +265,44 @@ def test_extract_added_binaries_trailing_comment_stripped(
 # ---------------------------------------------------------------------------
 
 
-def test_extract_added_binaries_deduplication(tmp_path: Path) -> None:
+def test_extract_added_binaries_deduplication() -> None:
     """Same package appearing in multiple hunks appears exactly once in result."""
     diff = "+    - some-pkg\n+    - some-pkg\n"
-    workdir = tmp_path
-    productcompose = workdir / "000productcompose" / "default.productcompose"
-    productcompose.parent.mkdir(parents=True)
-    productcompose.touch()
-    log_argv = _fake_log_argv(productcompose)
-    show_argv = _fake_show_argv(_FAKE_SHA, productcompose)
+    log_argv = _fake_log_argv(DEFAULT_PRODUCTCOMPOSE)
+    show_argv = _fake_show_argv(_FAKE_SHA, DEFAULT_PRODUCTCOMPOSE)
     runner = FakeRunner(
         {
             log_argv: (0, _FAKE_SHA + "\n"),
             show_argv: (0, diff),
         }
     )
-    config = Config(productcompose_file=productcompose)
-    result = extract_added_binaries(workdir, config, runner)
+    result = extract_added_binaries(_DEFAULT_CONFIG, runner)
     assert result == ["some-pkg"]
 
 
 # ---------------------------------------------------------------------------
-# extract_added_binaries — Cycle 14: git log failure raises PipelineError
+# extract_added_binaries — Cycle 14: probe non-zero exit triggers fallback → error
 # ---------------------------------------------------------------------------
 
 
-def test_extract_added_binaries_git_log_failure_raises_pipeline_error(
+def test_extract_added_binaries_probe_nonzero_triggers_fallback_then_errors(
     tmp_path: Path,
 ) -> None:
-    """git log non-zero returncode raises PipelineError(NO_PRODUCTCOMPOSE_HISTORY)."""
-    workdir = tmp_path
-    productcompose = workdir / "000productcompose" / "default.productcompose"
-    productcompose.parent.mkdir(parents=True)
-    productcompose.touch()
-    log_argv = _fake_log_argv(productcompose)
-    runner = FakeRunner({log_argv: (1, "")})
-    config = Config(productcompose_file=productcompose)
+    """Probe non-zero exit triggers clone fallback; failed post-clone probe raises."""
+    clone_dir = tmp_path / "SLES"
+    clone_argv = ("git", "clone", _SLES_GIT_URL, str(clone_dir))
+    runner = FakeRunner(
+        {
+            # First probe: non-zero exit → fallback triggered
+            (_PROBE_ARGV_HEAD, None): (1, ""),
+            # Clone succeeds
+            clone_argv: (0, ""),
+            # Second probe (cwd=clone_dir): also non-zero → PipelineError
+            (_PROBE_ARGV_HEAD, clone_dir): (1, ""),
+        }
+    )
     with pytest.raises(PipelineError) as exc_info:
-        extract_added_binaries(workdir, config, runner)
+        extract_added_binaries(_DEFAULT_CONFIG, runner, _clone_dir=clone_dir)
     assert exc_info.value.reason == PipelineErrorReason.NO_PRODUCTCOMPOSE_HISTORY
 
 
@@ -432,23 +311,182 @@ def test_extract_added_binaries_git_log_failure_raises_pipeline_error(
 # ---------------------------------------------------------------------------
 
 
-def test_extract_added_binaries_git_show_failure_raises_pipeline_error(
-    tmp_path: Path,
-) -> None:
+def test_extract_added_binaries_git_show_failure_raises_pipeline_error() -> None:
     """git show non-zero returncode raises PipelineError(NO_PRODUCTCOMPOSE_HISTORY)."""
-    workdir = tmp_path
-    productcompose = workdir / "000productcompose" / "default.productcompose"
-    productcompose.parent.mkdir(parents=True)
-    productcompose.touch()
-    log_argv = _fake_log_argv(productcompose)
-    show_argv = _fake_show_argv(_FAKE_SHA, productcompose)
+    log_argv = _fake_log_argv(DEFAULT_PRODUCTCOMPOSE)
+    show_argv = _fake_show_argv(_FAKE_SHA, DEFAULT_PRODUCTCOMPOSE)
     runner = FakeRunner(
         {
             log_argv: (0, _FAKE_SHA + "\n"),
             show_argv: (128, ""),
         }
     )
-    config = Config(productcompose_file=productcompose)
     with pytest.raises(PipelineError) as exc_info:
-        extract_added_binaries(workdir, config, runner)
+        extract_added_binaries(_DEFAULT_CONFIG, runner)
     assert exc_info.value.reason == PipelineErrorReason.NO_PRODUCTCOMPOSE_HISTORY
+
+
+# ---------------------------------------------------------------------------
+# Fallback tests — Cycle 16+: clone fallback when probe returns empty/non-zero
+# ---------------------------------------------------------------------------
+
+
+def test_fallback_to_clone_when_probe_empty(tmp_path: Path) -> None:
+    """When git log -1 in cwd returns empty SHA, fall back to clone."""
+    clone_dir = tmp_path / "SLES"
+    clone_argv = ("git", "clone", _SLES_GIT_URL, str(clone_dir))
+    show_argv = _fake_show_argv(_FAKE_SHA, DEFAULT_PRODUCTCOMPOSE)
+    runner = FakeRunner(
+        {
+            # First probe (cwd=None): empty SHA → triggers fallback
+            (_PROBE_ARGV_HEAD, None): (0, ""),
+            # Clone succeeds
+            clone_argv: (0, ""),
+            # Second probe (cwd=clone_dir): returns sha
+            (_PROBE_ARGV_HEAD, clone_dir): (0, _FAKE_SHA + "\n"),
+            # git show in clone_dir
+            (show_argv, clone_dir): (0, _SAMPLE_DIFF),
+        }
+    )
+    result = extract_added_binaries(
+        config=_DEFAULT_CONFIG, runner=runner, _clone_dir=clone_dir
+    )
+    assert result == sorted(set(_EXPECTED_FROM_SAMPLE))
+
+
+def test_clone_failure_raises_pipeline_error(tmp_path: Path) -> None:
+    """When git clone fails, raises PipelineError(NO_PRODUCTCOMPOSE_HISTORY)."""
+    clone_dir = tmp_path / "SLES"
+    clone_argv = ("git", "clone", _SLES_GIT_URL, str(clone_dir))
+    runner = FakeRunner(
+        {
+            # Probe returns empty → triggers fallback
+            (_PROBE_ARGV_HEAD, None): (0, ""),
+            # Clone fails with non-zero exit
+            clone_argv: (128, ""),
+        }
+    )
+    with pytest.raises(PipelineError) as exc_info:
+        extract_added_binaries(
+            config=_DEFAULT_CONFIG, runner=runner, _clone_dir=clone_dir
+        )
+    assert exc_info.value.reason == PipelineErrorReason.NO_PRODUCTCOMPOSE_HISTORY
+    assert "git clone" in str(exc_info.value)
+    assert "exit 128" in str(exc_info.value)
+
+
+def test_post_clone_probe_empty_raises_pipeline_error(tmp_path: Path) -> None:
+    """When the post-clone git log probe returns empty SHA, raises PipelineError."""
+    clone_dir = tmp_path / "SLES"
+    clone_argv = ("git", "clone", _SLES_GIT_URL, str(clone_dir))
+    runner = FakeRunner(
+        {
+            # First probe (cwd=None): empty → triggers fallback
+            (_PROBE_ARGV_HEAD, None): (0, ""),
+            # Clone succeeds
+            clone_argv: (0, ""),
+            # Second probe (cwd=clone_dir): still empty
+            (_PROBE_ARGV_HEAD, clone_dir): (0, ""),
+        }
+    )
+    with pytest.raises(PipelineError) as exc_info:
+        extract_added_binaries(
+            config=_DEFAULT_CONFIG, runner=runner, _clone_dir=clone_dir
+        )
+    assert "in cloned repo" in str(exc_info.value)
+
+
+def test_fallback_emits_warning_log(
+    tmp_path: Path, caplog: pytest.LogCaptureFixture
+) -> None:
+    """When fallback triggers, logs at WARNING level with SLES URL."""
+    import logging
+
+    clone_dir = tmp_path / "SLES"
+    clone_argv = ("git", "clone", _SLES_GIT_URL, str(clone_dir))
+    show_argv = _fake_show_argv(_FAKE_SHA, DEFAULT_PRODUCTCOMPOSE)
+    runner = FakeRunner(
+        {
+            # First probe: empty → triggers fallback
+            (_PROBE_ARGV_HEAD, None): (0, ""),
+            # Clone succeeds
+            clone_argv: (0, ""),
+            # Second probe (cwd=clone_dir): returns sha
+            (_PROBE_ARGV_HEAD, clone_dir): (0, _FAKE_SHA + "\n"),
+            # git show in clone_dir
+            (show_argv, clone_dir): (0, ""),
+        }
+    )
+    with caplog.at_level(logging.WARNING, logger="compose_orphans.pipeline.diff"):
+        extract_added_binaries(
+            config=_DEFAULT_CONFIG, runner=runner, _clone_dir=clone_dir
+        )
+    warning_records = [r for r in caplog.records if r.levelno == logging.WARNING]
+    assert len(warning_records) == 1
+    assert "Not in SLES git checkout" in warning_records[0].message
+    assert _SLES_GIT_URL in warning_records[0].message
+
+
+def test_fallback_does_not_leak_tempdir() -> None:
+    """Production path (no _clone_dir) must clean up its tempdir on exception."""
+    import os
+    import tempfile as _tempfile
+
+    tmpdir_root = _tempfile.gettempdir()
+    before = set(os.listdir(tmpdir_root))
+
+    # Probe returns exit 0 with empty stdout → triggers fallback (empty-SHA branch).
+    # Clone call returns exit 0 (default), so we enter the CM body.
+    # Post-clone probe also returns empty SHA → PipelineError inside CM.
+    # TemporaryDirectory must clean up regardless.
+    class _ProbeFailRunner:
+        """Returns exit 0 + empty stdout for probes; exit 0 for everything else."""
+
+        def __call__(
+            self,
+            argv: list[str],
+            *,
+            timeout: int,
+            cwd: Path | None = None,
+        ) -> subprocess.CompletedProcess[str]:
+            import subprocess as _sp
+
+            probe_argv_list = list(_PROBE_ARGV_HEAD)
+            if argv == probe_argv_list:
+                # Both first and second probe return empty SHA to force the
+                # "no commits in cloned repo" error path inside the CM.
+                return _sp.CompletedProcess(argv, 0, "", "")
+            # Clone call: succeed so we enter the CM body.
+            return _sp.CompletedProcess(argv, 0, "", "")
+
+    runner = _ProbeFailRunner()
+    with pytest.raises(PipelineError):
+        extract_added_binaries(config=_DEFAULT_CONFIG, runner=runner)
+
+    after = set(os.listdir(tmpdir_root))
+    leaked = after - before
+    # Allow any pre-existing dirs that happened to be created concurrently;
+    # ensure nothing matching typical Python tempdir patterns leaked from us.
+    assert not any(name.startswith("tmp") for name in leaked), (
+        f"tempdir leaked: {leaked}"
+    )
+
+
+def test_clone_git_show_failure_raises_pipeline_error(tmp_path: Path) -> None:
+    """In clone fallback, git show non-zero exit raises PipelineError."""
+    clone_dir = tmp_path / "SLES"
+    clone_argv = ("git", "clone", _SLES_GIT_URL, str(clone_dir))
+    show_argv = _fake_show_argv(_FAKE_SHA, DEFAULT_PRODUCTCOMPOSE)
+    runner = FakeRunner(
+        {
+            (_PROBE_ARGV_HEAD, None): (0, ""),
+            clone_argv: (0, ""),
+            (_PROBE_ARGV_HEAD, clone_dir): (0, _FAKE_SHA + "\n"),
+            (show_argv, clone_dir): (128, ""),
+        }
+    )
+    with pytest.raises(PipelineError) as exc_info:
+        extract_added_binaries(_DEFAULT_CONFIG, runner, _clone_dir=clone_dir)
+    assert exc_info.value.reason == PipelineErrorReason.NO_PRODUCTCOMPOSE_HISTORY
+    assert "git show" in str(exc_info.value)
+    assert "exit 128" in str(exc_info.value)

@@ -52,7 +52,7 @@ class Runner(Protocol):
         explicit value derived from Config.timeout.
     cwd:
         Working directory for the subprocess.  Carried on the protocol from day
-        one so that resolve_workdir, extract_added_binaries, and
+        one so that extract_added_binaries and
         fetch_maintainership can all pass an explicit cwd without os.chdir.
         None means inherit the process cwd.
 
