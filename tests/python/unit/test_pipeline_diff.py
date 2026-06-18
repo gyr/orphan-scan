@@ -506,3 +506,81 @@ def test_sha256_repo_probe_takes_happy_path() -> None:
     result = extract_added_binaries(_DEFAULT_CONFIG, runner)
     assert result == _EXPECTED_FROM_SAMPLE
     assert len(runner.calls) == 2, "clone fallback must not be triggered"
+
+
+# ---------------------------------------------------------------------------
+# Branch support — Slice 1.7: local probe argv includes branch when set
+# ---------------------------------------------------------------------------
+
+
+def test_local_probe_argv_includes_branch_when_config_branch_set() -> None:
+    """`git log -1 --format=%H <branch> -- <pc>` when Config.branch is set."""
+    config = Config(branch="16.1")
+    probe_with_branch = (
+        "git",
+        "log",
+        "-1",
+        "--format=%H",
+        "16.1",
+        "--",
+        str(DEFAULT_PRODUCTCOMPOSE),
+    )
+    show_argv = _fake_show_argv(_FAKE_SHA, DEFAULT_PRODUCTCOMPOSE)
+    runner = FakeRunner(
+        {
+            probe_with_branch: (0, _FAKE_SHA + "\n"),
+            show_argv: (0, _SAMPLE_DIFF),
+        }
+    )
+    extract_added_binaries(config=config, runner=runner)
+    # First call should be the probe with branch
+    first_call_argv = runner.calls[0]["argv"]
+    assert first_call_argv == list(probe_with_branch)
+
+
+# ---------------------------------------------------------------------------
+# Branch support — Slice 1.10: clone argv includes --single-branch --branch
+# ---------------------------------------------------------------------------
+
+
+def test_clone_argv_includes_single_branch_when_config_branch_set(
+    tmp_path: Path,
+) -> None:
+    """Clone fallback uses --single-branch --branch <branch> when set."""
+    config = Config(branch="16.1")
+    clone_dir = tmp_path / "SLES"
+    probe_with_branch = (
+        "git",
+        "log",
+        "-1",
+        "--format=%H",
+        "16.1",
+        "--",
+        str(DEFAULT_PRODUCTCOMPOSE),
+    )
+    clone_argv = (
+        "git",
+        "clone",
+        "--single-branch",
+        "--branch",
+        "16.1",
+        _SLES_GIT_URL,
+        str(clone_dir),
+    )
+    show_argv = _fake_show_argv(_FAKE_SHA, DEFAULT_PRODUCTCOMPOSE)
+    runner = FakeRunner(
+        {
+            (probe_with_branch, None): (0, ""),  # local probe: empty → fallback
+            clone_argv: (0, ""),  # clone succeeds
+            (probe_with_branch, clone_dir): (0, _FAKE_SHA + "\n"),
+            (show_argv, clone_dir): (0, _SAMPLE_DIFF),
+        }
+    )
+    extract_added_binaries(
+        config=config,
+        runner=runner,
+        _clone_dir=clone_dir,
+    )
+    clone_calls = [c for c in runner.calls if c["argv"][:2] == ["git", "clone"]]
+    assert len(clone_calls) == 1
+    assert clone_calls[0]["argv"] == list(clone_argv)

@@ -65,6 +65,11 @@ report = check_orphans(
 | `sources_resolver` | `(list[str], Config, Runner) → tuple[list[str], list[str]]` | Maps binary names to source package names via OBS. Returns `(resolved, failed)`. |
 | `maintainership_provider` | `(Config, Runner) → dict` | Fetches the SLFO maintainership database. |
 
+> **Branch override:** `Config.branch` (default `None`) is optional. When unset,
+> the local probe uses the currently-checked-out HEAD and the clone fallback
+> pulls `origin/HEAD`. Set `branch="16.1"` (or the relevant ref name) when you
+> need deterministic results across multi-branch repos like SLES.
+
 > **Note:** `runner` is not forwarded to the maintainership stage — that stage requires
 > a binary-output subprocess protocol internally. To stub maintainership, supply
 > `maintainership_provider` directly.
@@ -82,6 +87,7 @@ report = check_orphans(
 | `--file PATH` | `COMPOSE_ORPHANS_FILE` | `000productcompose/default.productcompose` | productcompose path |
 | `--output FORMAT` | `COMPOSE_ORPHANS_OUTPUT` | `text` | `text` or `json` |
 | `--timeout SECS` | `COMPOSE_ORPHANS_TIMEOUT` | `30` | Network timeout in seconds |
+| `--branch BRANCH` | `COMPOSE_ORPHANS_BRANCH` | (none) | Target git branch for probe and clone |
 | `--log-format FORMAT` | — | `text` | `text` or `json` log formatter |
 | `--strict` | — | off | Exit 2 when failed binaries present, even with no orphans |
 

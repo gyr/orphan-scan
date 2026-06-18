@@ -25,9 +25,29 @@ _ADDED_BINARY_RE = re.compile(r"^\+\s+-\s+([A-Za-z0-9]\S*)", re.MULTILINE)
 # SHA-1 (40 hex) or SHA-256 (64 hex, git ≥2.29 --object-format=sha256).
 _SHA_RE = re.compile(r"^[0-9a-f]{40}$|^[0-9a-f]{64}$")
 
-_PROBE_ARGV_TEMPLATE = ["git", "log", "-1", "--format=%H", "--"]
-
 _log = logging.getLogger(__name__)
+
+
+def _build_clone_argv(url: str, dest: Path, branch: str | None) -> list[str]:
+    """Build ``git clone [--single-branch --branch <branch>] <url> <dest>``."""
+    argv = ["git", "clone"]
+    if branch is not None:
+        argv.extend(["--single-branch", "--branch", branch])
+    argv.extend([url, str(dest)])
+    return argv
+
+
+def _build_probe_argv(pc_path: Path, branch: str | None) -> list[str]:
+    """Build ``git log -1 --format=%H [<branch>] -- <pc_path>``.
+
+    When ``branch`` is given, it appears as the rev between ``--format=%H``
+    and ``--``.  When ``None``, the rev defaults to ``HEAD``.
+    """
+    argv = ["git", "log", "-1", "--format=%H"]
+    if branch is not None:
+        argv.append(branch)
+    argv.extend(["--", str(pc_path)])
+    return argv
 
 
 def extract_added_binaries(
@@ -53,15 +73,23 @@ def extract_added_binaries(
         prefix marks this as non-public API.
     """
     pc_path = config.productcompose_file or DEFAULT_PRODUCTCOMPOSE
-    probe_argv = [*_PROBE_ARGV_TEMPLATE, str(pc_path)]
+    probe_argv = _build_probe_argv(pc_path, config.branch)
 
     # Step 1: probe current directory
     probe = runner(probe_argv, timeout=config.timeout, cwd=None)
     sha = probe.stdout.strip()
+    _log.debug("local probe: sha=%s", sha or "(empty)")
 
     if probe.returncode != 0 or not sha or not _SHA_RE.fullmatch(sha):
         # Step 2: clone fallback
-        _log.warning("Not in SLES git checkout; cloning %s", _SLES_GIT_URL)
+        if config.branch is not None:
+            _log.warning(
+                "Not in SLES git checkout; cloning %s (branch %s)",
+                _SLES_GIT_URL,
+                config.branch,
+            )
+        else:
+            _log.warning("Not in SLES git checkout; cloning %s", _SLES_GIT_URL)
         cm = (
             nullcontext(_clone_dir)
             if _clone_dir is not None
@@ -70,7 +98,7 @@ def extract_added_binaries(
         with cm as tmpdir:
             dest = Path(tmpdir)
             clone = runner(
-                ["git", "clone", _SLES_GIT_URL, str(dest)],
+                _build_clone_argv(_SLES_GIT_URL, dest, config.branch),
                 timeout=config.timeout,
             )
             if clone.returncode != 0:
@@ -82,6 +110,7 @@ def extract_added_binaries(
 
             probe2 = runner(probe_argv, timeout=config.timeout, cwd=dest)
             sha = probe2.stdout.strip()
+            _log.debug("clone probe: sha=%s", sha or "(empty)")
             if probe2.returncode != 0 or not sha or not _SHA_RE.fullmatch(sha):
                 raise PipelineError(
                     PipelineErrorReason.NO_PRODUCTCOMPOSE_HISTORY,

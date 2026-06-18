@@ -341,3 +341,28 @@ def test_invalid_env_var_exits_64_with_config_error(
     assert exc_info.value.code == 64
     captured = capsys.readouterr()
     assert "configuration error" in captured.err
+
+
+# ---------------------------------------------------------------------------
+# 20. --branch flag forwards to Config
+# ---------------------------------------------------------------------------
+
+
+def test_cli_branch_flag_forwards_to_config(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    captured: dict[str, object] = {}
+
+    def fake_check_orphans(config):  # type: ignore[no-untyped-def]
+        captured["branch"] = config.branch
+        from compose_orphans.report import OrphanReport
+
+        return OrphanReport(orphans=[], checked=0, failed_binaries=[])
+
+    monkeypatch.setattr("compose_orphans.cli.check_orphans", fake_check_orphans)
+    from compose_orphans.cli import main
+
+    with pytest.raises(SystemExit) as exc_info:
+        main(["--branch", "16.1"])
+    assert exc_info.value.code == 0
+    assert captured["branch"] == "16.1"

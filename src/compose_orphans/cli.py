@@ -52,6 +52,13 @@ def _build_parser() -> argparse.ArgumentParser:
         help="Network timeout in seconds (default: 30).",
     )
     parser.add_argument(
+        "--branch",
+        default=None,
+        type=str,
+        metavar="BRANCH",
+        help="Target git branch (default: HEAD; clone fallback uses origin/HEAD).",
+    )
+    parser.add_argument(
         "--quiet",
         action="store_true",
         default=False,
@@ -121,6 +128,8 @@ def main(argv: list[str] | None = None) -> None:
         overrides["timeout"] = args.timeout
     if args.file is not None:
         overrides["productcompose_file"] = Path(args.file)
+    if args.branch is not None:
+        overrides["branch"] = args.branch
 
     try:
         config = Config.from_env(**overrides)

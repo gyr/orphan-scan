@@ -221,3 +221,56 @@ def test_from_env_override_timeout_beats_env_var(
     monkeypatch.delenv("COMPOSE_ORPHANS_OUTPUT", raising=False)
     cfg = Config.from_env(timeout=15)
     assert cfg.timeout == 15
+
+
+# ---------------------------------------------------------------------------
+# Validation — branch
+# ---------------------------------------------------------------------------
+
+
+def test_config_branch_empty_string_raises_value_error() -> None:
+    with pytest.raises(ValueError, match="branch must be a non-empty"):
+        Config(branch="")
+
+
+def test_config_branch_with_shell_metacharacter_raises_value_error() -> None:
+    with pytest.raises(ValueError, match="valid git ref name"):
+        Config(branch="main; rm -rf /")
+
+
+def test_config_branch_with_path_traversal_raises_value_error() -> None:
+    with pytest.raises(ValueError, match="valid git ref name"):
+        Config(branch="../etc/passwd")
+
+
+@pytest.mark.parametrize("branch", ["16.0", "16.1", "SLE-15-SP6", "factory/main"])
+def test_config_branch_accepts_valid_ref_names(branch: str) -> None:
+    config = Config(branch=branch)
+    assert config.branch == branch
+
+
+# ---------------------------------------------------------------------------
+# from_env — branch env var
+# ---------------------------------------------------------------------------
+
+
+def test_from_env_reads_branch(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("COMPOSE_ORPHANS_BRANCH", "16.1")
+    config = Config.from_env()
+    assert config.branch == "16.1"
+
+
+def test_from_env_no_branch_env_var_defaults_to_none(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.delenv("COMPOSE_ORPHANS_BRANCH", raising=False)
+    config = Config.from_env()
+    assert config.branch is None
+
+
+def test_from_env_override_branch_beats_env_var(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("COMPOSE_ORPHANS_BRANCH", "16.0")
+    config = Config.from_env(branch="16.1")
+    assert config.branch == "16.1"
