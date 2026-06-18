@@ -69,6 +69,11 @@ def check_orphans(
         Immutable result object with orphans, checked count, and failed
         binaries.
 
+        When ``binaries_provider`` returns an empty list, the pipeline
+        short-circuits: ``sources_resolver`` and ``maintainership_provider``
+        are not invoked and an ``OrphanReport`` with empty fields is
+        returned directly.
+
     Raises
     ------
     PipelineError
@@ -101,6 +106,12 @@ def check_orphans(
     _log.info("diff: %d added binaries", len(binaries))
     if binaries:
         _log.debug("diff stage: binaries: %s", binaries)
+
+    if not binaries:
+        _log.info(
+            "no added binaries — skipping sources, maintainership, orphans stages"
+        )
+        return OrphanReport(orphans=[], checked=0, failed_binaries=[])
 
     _log.debug("sources stage: starting — %d binaries to resolve", len(binaries))
     _t_sources = time.perf_counter()

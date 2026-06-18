@@ -287,6 +287,64 @@ def test_info_logs_emitted_for_stage_milestones(
     )
 
 
+def test_empty_binaries_does_not_call_sources_resolver() -> None:
+    """When binaries == [], sources_resolver MUST NOT be called (perf + DI contract)."""
+    sources_calls: list[tuple] = []
+
+    def spy_sources_resolver(binaries, cfg, run):  # type: ignore[no-untyped-def]
+        sources_calls.append((tuple(binaries),))
+        return [], []
+
+    check_orphans(
+        Config(),
+        binaries_provider=lambda cfg, run: [],
+        sources_resolver=spy_sources_resolver,
+        maintainership_provider=lambda cfg, run: {"packages": {}},
+    )
+    assert sources_calls == [], (
+        f"sources_resolver was invoked despite empty binaries: {sources_calls}"
+    )
+
+
+def test_empty_binaries_does_not_call_maintainership_provider() -> None:
+    """When binaries == [], maintainership_provider MUST NOT be called."""
+    maint_calls: list[tuple] = []
+
+    def spy_maintainership_provider(cfg, run):  # type: ignore[no-untyped-def]
+        maint_calls.append((cfg, run))
+        return {"packages": {}}
+
+    check_orphans(
+        Config(),
+        binaries_provider=lambda cfg, run: [],
+        sources_resolver=lambda binaries, cfg, run: ([], []),
+        maintainership_provider=spy_maintainership_provider,
+    )
+    assert maint_calls == [], (
+        f"maintainership_provider was invoked despite empty binaries: {maint_calls}"
+    )
+
+
+def test_empty_binaries_emits_skip_info_log(caplog: pytest.LogCaptureFixture) -> None:
+    """When binaries == [], an INFO log explains the skip."""
+    import logging
+
+    with caplog.at_level(logging.INFO, logger="compose_orphans.pipeline"):
+        check_orphans(
+            Config(),
+            binaries_provider=lambda cfg, run: [],
+            sources_resolver=lambda binaries, cfg, run: ([], []),
+            maintainership_provider=lambda cfg, run: {"packages": {}},
+        )
+    skip_records = [
+        r
+        for r in caplog.records
+        if r.levelno == logging.INFO and "skipping" in r.message
+    ]
+    assert len(skip_records) == 1
+    assert "no added binaries" in skip_records[0].message
+
+
 def test_quiet_suppresses_info_logs(
     caplog: pytest.LogCaptureFixture,
 ) -> None:

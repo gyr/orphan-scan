@@ -65,6 +65,12 @@ report = check_orphans(
 | `sources_resolver` | `(list[str], Config, Runner) → tuple[list[str], list[str]]` | Maps binary names to source package names via OBS. Returns `(resolved, failed)`. |
 | `maintainership_provider` | `(Config, Runner) → dict` | Fetches the SLFO maintainership database. |
 
+> **Early exit:** when `binaries_provider` returns an empty list, the pipeline
+> short-circuits — `sources_resolver` and `maintainership_provider` are NOT
+> invoked. Their outputs on an empty input are mathematically determined
+> (`([], [])` and `{"packages": {}}` respectively), and skipping them avoids
+> wasted OBS / git-archive network calls.
+
 > **Branch override:** `Config.branch` (default `None`) is optional. When unset,
 > the local probe uses the currently-checked-out HEAD and the clone fallback
 > pulls `origin/HEAD`. Set `branch="16.1"` (or the relevant ref name) when you
