@@ -76,6 +76,11 @@ report = check_orphans(
 > pulls `origin/HEAD`. Set `branch="16.1"` (or the relevant ref name) when you
 > need deterministic results across multi-branch repos like SLES.
 
+> **Maintainership ref override:** `Config.maintainership_ref` (default
+> `"slfo-main"`) selects the git ref used by the SLFO `git archive` call.
+> Override only when you need to test against a topic branch of the
+> maintainership database — the default is correct for production use.
+
 > **Note:** `runner` is not forwarded to the maintainership stage — that stage requires
 > a binary-output subprocess protocol internally. To stub maintainership, supply
 > `maintainership_provider` directly.
@@ -94,6 +99,7 @@ report = check_orphans(
 | `--output FORMAT` | `COMPOSE_ORPHANS_OUTPUT` | `text` | `text` or `json` |
 | `--timeout SECS` | `COMPOSE_ORPHANS_TIMEOUT` | `30` | Network timeout in seconds |
 | `--branch BRANCH` | `COMPOSE_ORPHANS_BRANCH` | (none) | Target git branch for probe and clone |
+| `--maintainership-ref REF` | `COMPOSE_ORPHANS_MAINTAINERSHIP_REF` | `slfo-main` | Git ref for the SLFO maintainership archive |
 | `--log-format FORMAT` | — | `text` | `text` or `json` log formatter |
 | `--strict` | — | off | Exit 2 when failed binaries present, even with no orphans |
 

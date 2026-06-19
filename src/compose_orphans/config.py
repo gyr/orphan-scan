@@ -30,6 +30,7 @@ class Config:
     output: Literal["text", "json"] = "text"
     timeout: int = 30
     branch: str | None = None
+    maintainership_ref: str = "slfo-main"
 
     def __post_init__(self) -> None:
         if not self.project:
@@ -52,6 +53,14 @@ class Config:
                     f"branch must be a valid git ref name (alphanumeric / dot / "
                     f"slash / hyphen / underscore, ≤255 chars), got {self.branch!r}"
                 )
+        if not self.maintainership_ref:
+            raise ValueError("maintainership_ref must be a non-empty string")
+        if not _VALID_BRANCH_RE.fullmatch(self.maintainership_ref):
+            raise ValueError(
+                "maintainership_ref must be a valid git ref name "
+                "(alphanumeric / dot / slash / hyphen / underscore, ≤255 chars), "
+                f"got {self.maintainership_ref!r}"
+            )
 
     @classmethod
     def from_env(cls, **overrides: object) -> Config:
@@ -63,6 +72,7 @@ class Config:
           COMPOSE_ORPHANS_OUTPUT   → output (str; validated by __post_init__)
           COMPOSE_ORPHANS_TIMEOUT  → timeout (int; ValueError if not parseable)
           COMPOSE_ORPHANS_BRANCH   → branch (str)
+          COMPOSE_ORPHANS_MAINTAINERSHIP_REF → maintainership_ref (str)
 
         Keyword overrides (e.g. from CLI flags) beat env vars, which beat defaults.
 
@@ -96,6 +106,10 @@ class Config:
         branch_env = os.environ.get("COMPOSE_ORPHANS_BRANCH")
         if branch_env is not None:
             kwargs["branch"] = branch_env
+
+        maint_ref_env = os.environ.get("COMPOSE_ORPHANS_MAINTAINERSHIP_REF")
+        if maint_ref_env is not None:
+            kwargs["maintainership_ref"] = maint_ref_env
 
         kwargs.update(overrides)
         return cls(**kwargs)  # type: ignore[arg-type]  # dict[str,object] can't be narrowed to per-field types; __post_init__ validates

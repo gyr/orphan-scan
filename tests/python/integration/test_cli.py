@@ -366,3 +366,28 @@ def test_cli_branch_flag_forwards_to_config(
         main(["--branch", "16.1"])
     assert exc_info.value.code == 0
     assert captured["branch"] == "16.1"
+
+
+# ---------------------------------------------------------------------------
+# 21. --maintainership-ref flag forwards to Config
+# ---------------------------------------------------------------------------
+
+
+def test_cli_maintainership_ref_flag_forwards_to_config(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    captured: dict[str, object] = {}
+
+    def fake_check_orphans(config):  # type: ignore[no-untyped-def]
+        captured["maintainership_ref"] = config.maintainership_ref
+        from compose_orphans.report import OrphanReport
+
+        return OrphanReport(orphans=[], checked=0, failed_binaries=[])
+
+    monkeypatch.setattr("compose_orphans.cli.check_orphans", fake_check_orphans)
+    from compose_orphans.cli import main
+
+    with pytest.raises(SystemExit) as exc_info:
+        main(["--maintainership-ref", "slfo-15.6"])
+    assert exc_info.value.code == 0
+    assert captured["maintainership_ref"] == "slfo-15.6"

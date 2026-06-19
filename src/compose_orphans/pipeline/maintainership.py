@@ -22,13 +22,20 @@ if TYPE_CHECKING:
     from compose_orphans.config import Config
     from compose_orphans.runner import BinaryRunner
 
-GIT_ARCHIVE_ARGV: list[str] = [
-    "git",
-    "archive",
-    "--remote=ssh://gitea@src.suse.de/products/SLFO.git",
-    "slfo-main",
-    "_maintainership.json",
-]
+_SLFO_GIT_URL = "ssh://gitea@src.suse.de/products/SLFO.git"
+_MAINTAINERSHIP_FILE = "_maintainership.json"
+
+
+def _build_archive_argv(ref: str) -> list[str]:
+    """Build ``git archive --remote=<SLFO_URL> <ref> _maintainership.json``."""
+    return [
+        "git",
+        "archive",
+        f"--remote={_SLFO_GIT_URL}",
+        ref,
+        _MAINTAINERSHIP_FILE,
+    ]
+
 
 _TAR_SIZE_CAP = 50 * 1024 * 1024  # 50 MB
 _JSON_SIZE_CAP = 100 * 1024 * 1024  # 100 MB
@@ -74,7 +81,9 @@ def fetch_maintainership(
         runner = default_binary_runner
 
     try:
-        proc = runner(GIT_ARCHIVE_ARGV, timeout=config.timeout)
+        proc = runner(
+            _build_archive_argv(config.maintainership_ref), timeout=config.timeout
+        )
     except subprocess.TimeoutExpired as e:
         raise NetworkTimeout("fetch_maintainership", config.timeout) from e
 
@@ -94,17 +103,17 @@ def fetch_maintainership(
     try:
         with tarfile.open(fileobj=io.BytesIO(proc.stdout)) as tf:
             try:
-                member = tf.extractfile("_maintainership.json")
+                member = tf.extractfile(_MAINTAINERSHIP_FILE)
             except KeyError as e:
                 raise PipelineError(
                     _FETCH_FAILED,
-                    "_maintainership.json not in tar archive",
+                    f"{_MAINTAINERSHIP_FILE} not in tar archive",
                 ) from e
 
             if member is None:
                 raise PipelineError(
                     _FETCH_FAILED,
-                    "_maintainership.json is a directory entry, not a file",
+                    f"{_MAINTAINERSHIP_FILE} is a directory entry, not a file",
                 )
 
             json_bytes = member.read()

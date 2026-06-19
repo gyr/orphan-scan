@@ -31,6 +31,7 @@ _DEFAULT_CONFIG_TIMEOUT = 30
 
 class _FakeConfig:
     timeout: int = _DEFAULT_CONFIG_TIMEOUT
+    maintainership_ref: str = "slfo-main"
 
 
 _CONFIG = _FakeConfig()
@@ -344,3 +345,49 @@ def test_fetch_maintainership_exception_chaining_json_error() -> None:
     with pytest.raises(PipelineError) as exc_info:
         fetch_maintainership(_CONFIG, runner=runner)
     assert isinstance(exc_info.value.__cause__, json.JSONDecodeError)
+
+
+# ---------------------------------------------------------------------------
+# Cycle 16: argv uses config.maintainership_ref
+# ---------------------------------------------------------------------------
+
+
+def test_fetch_maintainership_argv_uses_default_ref() -> None:
+    """Default Config.maintainership_ref ('slfo-main') flows into argv."""
+    from compose_orphans.pipeline.maintainership import fetch_maintainership
+
+    payload = {"packages": {}}
+    json_bytes = json.dumps(payload).encode()
+    tar_bytes = make_tar("_maintainership.json", json_bytes)
+    runner = FakeBinaryRunner(returncode=0, stdout=tar_bytes, stderr=b"")
+    fetch_maintainership(_CONFIG, runner=runner)
+    assert len(runner.calls) == 1
+    assert runner.calls[0]["argv"] == [
+        "git",
+        "archive",
+        "--remote=ssh://gitea@src.suse.de/products/SLFO.git",
+        "slfo-main",
+        "_maintainership.json",
+    ]
+
+
+def test_fetch_maintainership_argv_honors_override_ref() -> None:
+    """Override Config.maintainership_ref flows into argv at position [-2]."""
+    from compose_orphans.pipeline.maintainership import fetch_maintainership
+
+    class _OverrideConfig:
+        timeout = 30
+        maintainership_ref = "slfo-15.6"
+
+    payload = {"packages": {}}
+    json_bytes = json.dumps(payload).encode()
+    tar_bytes = make_tar("_maintainership.json", json_bytes)
+    runner = FakeBinaryRunner(returncode=0, stdout=tar_bytes, stderr=b"")
+    fetch_maintainership(_OverrideConfig(), runner=runner)
+    assert runner.calls[0]["argv"] == [
+        "git",
+        "archive",
+        "--remote=ssh://gitea@src.suse.de/products/SLFO.git",
+        "slfo-15.6",
+        "_maintainership.json",
+    ]

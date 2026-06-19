@@ -274,3 +274,62 @@ def test_from_env_override_branch_beats_env_var(
     monkeypatch.setenv("COMPOSE_ORPHANS_BRANCH", "16.0")
     config = Config.from_env(branch="16.1")
     assert config.branch == "16.1"
+
+
+# ---------------------------------------------------------------------------
+# Validation — maintainership_ref
+# ---------------------------------------------------------------------------
+
+
+def test_config_maintainership_ref_empty_string_raises_value_error() -> None:
+    with pytest.raises(ValueError, match="maintainership_ref must be a non-empty"):
+        Config(maintainership_ref="")
+
+
+def test_config_maintainership_ref_with_shell_metacharacter_raises_value_error() -> (
+    None
+):
+    with pytest.raises(ValueError, match="valid git ref name"):
+        Config(maintainership_ref="main; rm -rf /")
+
+
+def test_config_maintainership_ref_with_path_traversal_raises_value_error() -> None:
+    with pytest.raises(ValueError, match="valid git ref name"):
+        Config(maintainership_ref="../etc/passwd")
+
+
+def test_config_maintainership_ref_default_is_slfo_main() -> None:
+    assert Config().maintainership_ref == "slfo-main"
+
+
+@pytest.mark.parametrize("ref", ["slfo-main", "slfo-15.6", "feature/test", "abc123"])
+def test_config_maintainership_ref_accepts_valid_refs(ref: str) -> None:
+    config = Config(maintainership_ref=ref)
+    assert config.maintainership_ref == ref
+
+
+# ---------------------------------------------------------------------------
+# from_env — maintainership_ref env var
+# ---------------------------------------------------------------------------
+
+
+def test_from_env_reads_maintainership_ref(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("COMPOSE_ORPHANS_MAINTAINERSHIP_REF", "slfo-15.6")
+    config = Config.from_env()
+    assert config.maintainership_ref == "slfo-15.6"
+
+
+def test_from_env_no_maintainership_ref_env_var_defaults_to_slfo_main(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.delenv("COMPOSE_ORPHANS_MAINTAINERSHIP_REF", raising=False)
+    config = Config.from_env()
+    assert config.maintainership_ref == "slfo-main"
+
+
+def test_from_env_override_maintainership_ref_beats_env_var(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("COMPOSE_ORPHANS_MAINTAINERSHIP_REF", "slfo-15.6")
+    config = Config.from_env(maintainership_ref="slfo-main")
+    assert config.maintainership_ref == "slfo-main"

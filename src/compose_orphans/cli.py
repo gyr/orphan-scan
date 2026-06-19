@@ -59,6 +59,14 @@ def _build_parser() -> argparse.ArgumentParser:
         help="Target git branch (default: HEAD; clone fallback uses origin/HEAD).",
     )
     parser.add_argument(
+        "--maintainership-ref",
+        default=None,
+        type=str,
+        metavar="REF",
+        dest="maintainership_ref",
+        help="Git ref for the SLFO maintainership archive (default: slfo-main).",
+    )
+    parser.add_argument(
         "--quiet",
         action="store_true",
         default=False,
@@ -130,6 +138,8 @@ def main(argv: list[str] | None = None) -> None:
         overrides["productcompose_file"] = Path(args.file)
     if args.branch is not None:
         overrides["branch"] = args.branch
+    if args.maintainership_ref is not None:
+        overrides["maintainership_ref"] = args.maintainership_ref
 
     try:
         config = Config.from_env(**overrides)
