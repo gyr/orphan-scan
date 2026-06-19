@@ -391,3 +391,79 @@ def test_cli_maintainership_ref_flag_forwards_to_config(
         main(["--maintainership-ref", "slfo-15.6"])
     assert exc_info.value.code == 0
     assert captured["maintainership_ref"] == "slfo-15.6"
+
+
+# ---------------------------------------------------------------------------
+# 22. --partial-clone flag forwards to Config
+# ---------------------------------------------------------------------------
+
+
+def test_cli_partial_clone_flag_forwards_to_config(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    captured: dict[str, object] = {}
+
+    def fake_check_orphans(config):  # type: ignore[no-untyped-def]
+        captured["partial_clone"] = config.partial_clone
+        from compose_orphans.report import OrphanReport
+
+        return OrphanReport(orphans=[], checked=0, failed_binaries=[])
+
+    monkeypatch.setattr("compose_orphans.cli.check_orphans", fake_check_orphans)
+    from compose_orphans.cli import main
+
+    with pytest.raises(SystemExit) as exc_info:
+        main(["--partial-clone"])
+    assert exc_info.value.code == 0
+    assert captured["partial_clone"] is True
+
+
+def test_cli_no_partial_clone_flag_defaults_to_false(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    captured: dict[str, object] = {}
+
+    def fake_check_orphans(config):  # type: ignore[no-untyped-def]
+        captured["partial_clone"] = config.partial_clone
+        from compose_orphans.report import OrphanReport
+
+        return OrphanReport(orphans=[], checked=0, failed_binaries=[])
+
+    monkeypatch.setattr("compose_orphans.cli.check_orphans", fake_check_orphans)
+    # Also clear the env var so the default propagates
+    monkeypatch.delenv("COMPOSE_ORPHANS_PARTIAL_CLONE", raising=False)
+    from compose_orphans.cli import main
+
+    with pytest.raises(SystemExit) as exc_info:
+        main([])
+    assert exc_info.value.code == 0
+    assert captured["partial_clone"] is False
+
+
+def test_cli_env_partial_clone_true_without_flag_preserves_env(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Env var COMPOSE_ORPHANS_PARTIAL_CLONE=1 without --partial-clone
+    flag MUST yield Config.partial_clone == True (env-precedence pin).
+
+    This test pins the `if args.partial_clone:` invariant at plan
+    section "M2 — Behavior contract / CLI flag" — using
+    `if args.partial_clone is not None:` would clobber the env value
+    back to False and pass every other test in this slice.
+    """
+    captured: dict[str, object] = {}
+
+    def fake_check_orphans(config):  # type: ignore[no-untyped-def]
+        captured["partial_clone"] = config.partial_clone
+        from compose_orphans.report import OrphanReport
+
+        return OrphanReport(orphans=[], checked=0, failed_binaries=[])
+
+    monkeypatch.setattr("compose_orphans.cli.check_orphans", fake_check_orphans)
+    monkeypatch.setenv("COMPOSE_ORPHANS_PARTIAL_CLONE", "1")
+    from compose_orphans.cli import main
+
+    with pytest.raises(SystemExit) as exc_info:
+        main([])
+    assert exc_info.value.code == 0
+    assert captured["partial_clone"] is True

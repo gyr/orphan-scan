@@ -28,9 +28,17 @@ _SHA_RE = re.compile(r"^[0-9a-f]{40}$|^[0-9a-f]{64}$")
 _log = logging.getLogger(__name__)
 
 
-def _build_clone_argv(url: str, dest: Path, branch: str | None) -> list[str]:
-    """Build ``git clone [--single-branch --branch <branch>] <url> <dest>``."""
+def _build_clone_argv(
+    url: str, dest: Path, branch: str | None, partial_clone: bool = False
+) -> list[str]:
+    """Build the git clone argv for the SLES fallback.
+
+    Prepends ``--filter=blob:none`` when *partial_clone* is True, and
+    ``--single-branch --branch <branch>`` when *branch* is set.
+    """
     argv = ["git", "clone"]
+    if partial_clone:
+        argv.append("--filter=blob:none")
     if branch is not None:
         argv.extend(["--single-branch", "--branch", branch])
     argv.extend([url, str(dest)])
@@ -98,7 +106,9 @@ def extract_added_binaries(
         with cm as tmpdir:
             dest = Path(tmpdir)
             clone = runner(
-                _build_clone_argv(_SLES_GIT_URL, dest, config.branch),
+                _build_clone_argv(
+                    _SLES_GIT_URL, dest, config.branch, config.partial_clone
+                ),
                 timeout=config.timeout,
             )
             if clone.returncode != 0:

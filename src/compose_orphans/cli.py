@@ -67,6 +67,14 @@ def _build_parser() -> argparse.ArgumentParser:
         help="Git ref for the SLFO maintainership archive (default: slfo-main).",
     )
     parser.add_argument(
+        "--partial-clone",
+        action="store_true",
+        default=False,
+        dest="partial_clone",
+        help="Use git --filter=blob:none in the clone fallback "
+        "(experimental; requires gitea uploadpack.allowFilter=true).",
+    )
+    parser.add_argument(
         "--quiet",
         action="store_true",
         default=False,
@@ -140,6 +148,8 @@ def main(argv: list[str] | None = None) -> None:
         overrides["branch"] = args.branch
     if args.maintainership_ref is not None:
         overrides["maintainership_ref"] = args.maintainership_ref
+    if args.partial_clone:
+        overrides["partial_clone"] = True
 
     try:
         config = Config.from_env(**overrides)

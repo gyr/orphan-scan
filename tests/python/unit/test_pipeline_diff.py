@@ -584,3 +584,84 @@ def test_clone_argv_includes_single_branch_when_config_branch_set(
     clone_calls = [c for c in runner.calls if c["argv"][:2] == ["git", "clone"]]
     assert len(clone_calls) == 1
     assert clone_calls[0]["argv"] == list(clone_argv)
+
+
+# ---------------------------------------------------------------------------
+# Partial clone — M2: --filter=blob:none prepended when partial_clone=True
+# ---------------------------------------------------------------------------
+
+
+def test_clone_argv_includes_filter_blob_none_when_partial_clone_true(
+    tmp_path: Path,
+) -> None:
+    """Clone fallback uses --filter=blob:none when Config.partial_clone is True."""
+    config = Config(partial_clone=True)
+    clone_dir = tmp_path / "SLES"
+    clone_argv = (
+        "git",
+        "clone",
+        "--filter=blob:none",
+        _SLES_GIT_URL,
+        str(clone_dir),
+    )
+    show_argv = _fake_show_argv(_FAKE_SHA, DEFAULT_PRODUCTCOMPOSE)
+    runner = FakeRunner(
+        {
+            (_PROBE_ARGV_HEAD, None): (0, ""),
+            clone_argv: (0, ""),
+            (_PROBE_ARGV_HEAD, clone_dir): (0, _FAKE_SHA + "\n"),
+            (show_argv, clone_dir): (0, _SAMPLE_DIFF),
+        }
+    )
+    extract_added_binaries(
+        config=config,
+        runner=runner,
+        _clone_dir=clone_dir,
+    )
+    clone_calls = [c for c in runner.calls if c["argv"][:2] == ["git", "clone"]]
+    assert len(clone_calls) == 1
+    assert clone_calls[0]["argv"] == list(clone_argv)
+
+
+def test_clone_argv_includes_filter_and_branch_when_both_set(
+    tmp_path: Path,
+) -> None:
+    """Clone fallback combines --filter=blob:none and --single-branch correctly."""
+    config = Config(partial_clone=True, branch="16.1")
+    clone_dir = tmp_path / "SLES"
+    probe_branched = (
+        "git",
+        "log",
+        "-1",
+        "--format=%H",
+        "16.1",
+        "--",
+        str(DEFAULT_PRODUCTCOMPOSE),
+    )
+    clone_argv = (
+        "git",
+        "clone",
+        "--filter=blob:none",
+        "--single-branch",
+        "--branch",
+        "16.1",
+        _SLES_GIT_URL,
+        str(clone_dir),
+    )
+    show_argv = _fake_show_argv(_FAKE_SHA, DEFAULT_PRODUCTCOMPOSE)
+    runner = FakeRunner(
+        {
+            (probe_branched, None): (0, ""),
+            clone_argv: (0, ""),
+            (probe_branched, clone_dir): (0, _FAKE_SHA + "\n"),
+            (show_argv, clone_dir): (0, _SAMPLE_DIFF),
+        }
+    )
+    extract_added_binaries(
+        config=config,
+        runner=runner,
+        _clone_dir=clone_dir,
+    )
+    clone_calls = [c for c in runner.calls if c["argv"][:2] == ["git", "clone"]]
+    assert len(clone_calls) == 1
+    assert clone_calls[0]["argv"] == list(clone_argv)

@@ -81,6 +81,13 @@ report = check_orphans(
 > Override only when you need to test against a topic branch of the
 > maintainership database — the default is correct for production use.
 
+> **Partial clone (experimental):** `Config.partial_clone` (default `False`)
+> enables `git clone --filter=blob:none` in the clone fallback, deferring
+> blob fetches until needed. Verified prerequisites: `git show <sha>`
+> triggers on-demand blob fetch in such a clone. Unverified: gitea
+> `uploadpack.allowFilter=true` and git client ≥ 2.19 on your build hosts.
+> Test against your environment before relying on the default.
+
 > **Note:** `runner` is not forwarded to the maintainership stage — that stage requires
 > a binary-output subprocess protocol internally. To stub maintainership, supply
 > `maintainership_provider` directly.
@@ -100,6 +107,7 @@ report = check_orphans(
 | `--timeout SECS` | `COMPOSE_ORPHANS_TIMEOUT` | `30` | Network timeout in seconds |
 | `--branch BRANCH` | `COMPOSE_ORPHANS_BRANCH` | (none) | Target git branch for probe and clone |
 | `--maintainership-ref REF` | `COMPOSE_ORPHANS_MAINTAINERSHIP_REF` | `slfo-main` | Git ref for the SLFO maintainership archive |
+| `--partial-clone` | `COMPOSE_ORPHANS_PARTIAL_CLONE` | off | Use `git --filter=blob:none` in the clone fallback (experimental) |
 | `--log-format FORMAT` | — | `text` | `text` or `json` log formatter |
 | `--strict` | — | off | Exit 2 when failed binaries present, even with no orphans |
 

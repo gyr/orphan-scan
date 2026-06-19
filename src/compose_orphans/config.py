@@ -17,6 +17,22 @@ _VALID_PROJECT_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9:._-]{0,254}$")
 # Git ref names: same alphabet as project plus '/' for namespaced branches.
 _VALID_BRANCH_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._/-]{0,254}$")
 
+_TRUTHY = frozenset({"1", "true", "yes"})
+_FALSY = frozenset({"0", "false", "no", ""})
+
+
+def _parse_bool_env(name: str, value: str) -> bool:
+    """Parse a string from os.environ into a bool with strict alphabet."""
+    normalized = value.strip().lower()
+    if normalized in _TRUTHY:
+        return True
+    if normalized in _FALSY:
+        return False
+    raise ValueError(
+        f"{name} must be one of {sorted((_TRUTHY | _FALSY) - {''})!r} "
+        f"(case-insensitive), got {value!r}"
+    )
+
 
 @dataclass(frozen=True)
 class Config:
@@ -31,6 +47,7 @@ class Config:
     timeout: int = 30
     branch: str | None = None
     maintainership_ref: str = "slfo-main"
+    partial_clone: bool = False
 
     def __post_init__(self) -> None:
         if not self.project:
@@ -73,6 +90,7 @@ class Config:
           COMPOSE_ORPHANS_TIMEOUT  → timeout (int; ValueError if not parseable)
           COMPOSE_ORPHANS_BRANCH   → branch (str)
           COMPOSE_ORPHANS_MAINTAINERSHIP_REF → maintainership_ref (str)
+          COMPOSE_ORPHANS_PARTIAL_CLONE → partial_clone (bool; truthy="1"/"true"/"yes")
 
         Keyword overrides (e.g. from CLI flags) beat env vars, which beat defaults.
 
@@ -110,6 +128,12 @@ class Config:
         maint_ref_env = os.environ.get("COMPOSE_ORPHANS_MAINTAINERSHIP_REF")
         if maint_ref_env is not None:
             kwargs["maintainership_ref"] = maint_ref_env
+
+        partial_env = os.environ.get("COMPOSE_ORPHANS_PARTIAL_CLONE")
+        if partial_env is not None:
+            kwargs["partial_clone"] = _parse_bool_env(
+                "COMPOSE_ORPHANS_PARTIAL_CLONE", partial_env
+            )
 
         kwargs.update(overrides)
         return cls(**kwargs)  # type: ignore[arg-type]  # dict[str,object] can't be narrowed to per-field types; __post_init__ validates

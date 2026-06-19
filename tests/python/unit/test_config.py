@@ -333,3 +333,48 @@ def test_from_env_override_maintainership_ref_beats_env_var(
     monkeypatch.setenv("COMPOSE_ORPHANS_MAINTAINERSHIP_REF", "slfo-15.6")
     config = Config.from_env(maintainership_ref="slfo-main")
     assert config.maintainership_ref == "slfo-main"
+
+
+# ---------------------------------------------------------------------------
+# Defaults — partial_clone
+# ---------------------------------------------------------------------------
+
+
+def test_config_partial_clone_default_is_false() -> None:
+    assert Config().partial_clone is False
+
+
+# ---------------------------------------------------------------------------
+# from_env — COMPOSE_ORPHANS_PARTIAL_CLONE env var
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("val", ["1", "true", "True", "TRUE", "yes", "Yes"])
+def test_from_env_partial_clone_truthy_values(
+    monkeypatch: pytest.MonkeyPatch, val: str
+) -> None:
+    monkeypatch.setenv("COMPOSE_ORPHANS_PARTIAL_CLONE", val)
+    assert Config.from_env().partial_clone is True
+
+
+@pytest.mark.parametrize("val", ["0", "false", "False", "no", ""])
+def test_from_env_partial_clone_falsy_values(
+    monkeypatch: pytest.MonkeyPatch, val: str
+) -> None:
+    monkeypatch.setenv("COMPOSE_ORPHANS_PARTIAL_CLONE", val)
+    assert Config.from_env().partial_clone is False
+
+
+def test_from_env_partial_clone_invalid_raises(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("COMPOSE_ORPHANS_PARTIAL_CLONE", "maybe")
+    with pytest.raises(ValueError, match="COMPOSE_ORPHANS_PARTIAL_CLONE"):
+        Config.from_env()
+
+
+def test_from_env_no_partial_clone_env_var_defaults_to_false(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.delenv("COMPOSE_ORPHANS_PARTIAL_CLONE", raising=False)
+    assert Config.from_env().partial_clone is False
