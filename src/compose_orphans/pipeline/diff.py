@@ -105,6 +105,8 @@ def extract_added_binaries(
         )
         with cm as tmpdir:
             dest = Path(tmpdir)
+            if config.partial_clone:
+                _log.debug("clone fallback: using --filter=blob:none")
             clone = runner(
                 _build_clone_argv(
                     _SLES_GIT_URL, dest, config.branch, config.partial_clone

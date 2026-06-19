@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import subprocess
 from pathlib import Path
 
@@ -621,6 +622,61 @@ def test_clone_argv_includes_filter_blob_none_when_partial_clone_true(
     clone_calls = [c for c in runner.calls if c["argv"][:2] == ["git", "clone"]]
     assert len(clone_calls) == 1
     assert clone_calls[0]["argv"] == list(clone_argv)
+
+
+def test_fallback_emits_debug_filter_when_partial_clone(
+    tmp_path: Path, caplog: pytest.LogCaptureFixture
+) -> None:
+    """When partial_clone=True, clone fallback emits DEBUG for --filter=blob:none."""
+    config = Config(partial_clone=True)
+    clone_dir = tmp_path / "SLES"
+    clone_argv = (
+        "git",
+        "clone",
+        "--filter=blob:none",
+        _SLES_GIT_URL,
+        str(clone_dir),
+    )
+    show_argv = _fake_show_argv(_FAKE_SHA, DEFAULT_PRODUCTCOMPOSE)
+    runner = FakeRunner(
+        {
+            (_PROBE_ARGV_HEAD, None): (0, ""),
+            clone_argv: (0, ""),
+            (_PROBE_ARGV_HEAD, clone_dir): (0, _FAKE_SHA + "\n"),
+            (show_argv, clone_dir): (0, _SAMPLE_DIFF),
+        }
+    )
+    with caplog.at_level(logging.DEBUG, logger="compose_orphans.pipeline.diff"):
+        extract_added_binaries(config=config, runner=runner, _clone_dir=clone_dir)
+    debug_records = [r for r in caplog.records if r.levelno == logging.DEBUG]
+    assert any("--filter=blob:none" in r.message for r in debug_records), (
+        "expected DEBUG mentioning '--filter=blob:none'; "
+        f"got: {[r.message for r in debug_records]}"
+    )
+
+
+def test_fallback_no_debug_filter_when_partial_clone_false(
+    tmp_path: Path, caplog: pytest.LogCaptureFixture
+) -> None:
+    """When partial_clone=False, clone fallback does not emit the filter DEBUG."""
+    clone_dir = tmp_path / "SLES"
+    clone_argv = ("git", "clone", _SLES_GIT_URL, str(clone_dir))
+    show_argv = _fake_show_argv(_FAKE_SHA, DEFAULT_PRODUCTCOMPOSE)
+    runner = FakeRunner(
+        {
+            (_PROBE_ARGV_HEAD, None): (0, ""),
+            clone_argv: (0, ""),
+            (_PROBE_ARGV_HEAD, clone_dir): (0, _FAKE_SHA + "\n"),
+            (show_argv, clone_dir): (0, _SAMPLE_DIFF),
+        }
+    )
+    with caplog.at_level(logging.DEBUG, logger="compose_orphans.pipeline.diff"):
+        extract_added_binaries(
+            config=_DEFAULT_CONFIG, runner=runner, _clone_dir=clone_dir
+        )
+    assert not any("--filter=blob:none" in r.message for r in caplog.records), (
+        "DEBUG --filter=blob:none must not appear when partial_clone=False"
+    )
 
 
 def test_clone_argv_includes_filter_and_branch_when_both_set(

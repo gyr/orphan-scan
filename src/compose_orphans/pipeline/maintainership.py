@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import io
 import json
+import logging
 import subprocess  # nosec B404 - imported for TimeoutExpired only; no command construction here
 import tarfile
 from typing import TYPE_CHECKING
@@ -21,6 +22,8 @@ from compose_orphans.runner import default_binary_runner
 if TYPE_CHECKING:
     from compose_orphans.config import Config
     from compose_orphans.runner import BinaryRunner
+
+_log = logging.getLogger(__name__)
 
 _SLFO_GIT_URL = "ssh://gitea@src.suse.de/products/SLFO.git"
 _MAINTAINERSHIP_FILE = "_maintainership.json"
@@ -80,6 +83,7 @@ def fetch_maintainership(
     if runner is None:
         runner = default_binary_runner
 
+    _log.debug("fetching maintainership at ref=%s", config.maintainership_ref)
     try:
         proc = runner(
             _build_archive_argv(config.maintainership_ref), timeout=config.timeout

@@ -29,14 +29,21 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--version", action="version", version=f"compose-orphans {_VERSION}"
     )
-    parser.add_argument("--project", default=None, help="OBS project name.")
+    parser.add_argument(
+        "--project",
+        default=None,
+        help="OBS project name (default: SUSE:SLFO:Main).",
+    )
     parser.add_argument(
         "--file",
         dest="file",
         default=None,
         type=str,
         metavar="PATH",
-        help="Path to product-compose file.",
+        help=(
+            "Path to product-compose file "
+            "(default: 000productcompose/default.productcompose)."
+        ),
     )
     parser.add_argument(
         "--output",

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import io
 import json
+import logging
 import subprocess
 import tarfile
 from typing import TYPE_CHECKING
@@ -391,3 +392,29 @@ def test_fetch_maintainership_argv_honors_override_ref() -> None:
         "slfo-15.6",
         "_maintainership.json",
     ]
+
+
+# ---------------------------------------------------------------------------
+# Cycle 17: fetch_maintainership emits DEBUG naming the ref
+# ---------------------------------------------------------------------------
+
+
+def test_fetch_maintainership_logs_debug_ref(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """fetch_maintainership emits a DEBUG log naming the ref being fetched."""
+    from compose_orphans.pipeline.maintainership import fetch_maintainership
+
+    payload = {"packages": {}}
+    tar_bytes = make_tar("_maintainership.json", json.dumps(payload).encode())
+    runner = FakeBinaryRunner(returncode=0, stdout=tar_bytes, stderr=b"")
+    with caplog.at_level(
+        logging.DEBUG, logger="compose_orphans.pipeline.maintainership"
+    ):
+        fetch_maintainership(_CONFIG, runner=runner)
+    assert any(
+        "slfo-main" in r.message and r.levelno == logging.DEBUG for r in caplog.records
+    ), (
+        "expected DEBUG mentioning 'slfo-main'; "
+        f"got: {[r.message for r in caplog.records]}"
+    )
