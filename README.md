@@ -35,35 +35,40 @@ compose-orphans --quiet --output json > orphans.json   # CI usage
 
 ### Library
 
-```python
-from compose_orphans import check_orphans, Config
+CI gate — call `check_orphans`, handle errors, inspect `failed_binaries`:
 
-report = check_orphans()
+```python
+import sys
+from compose_orphans import check_orphans, Config, NetworkTimeout, PipelineError
+
+config = Config(
+    project="SUSE:SLFO:Main",
+    branch="16.1",          # pin branch for deterministic results across CI runs
+)
+
+try:
+    report = check_orphans(config)
+except NetworkTimeout as exc:
+    print(f"network timeout: {exc}", file=sys.stderr)
+    sys.exit(124)
+except PipelineError as exc:
+    print(f"pipeline error: {exc}", file=sys.stderr)
+    sys.exit(1)
+
+if report.failed_binaries:
+    # OBS source resolution failed for these binaries — excluded from the orphan
+    # check. Treat as a warning or hard error depending on your CI policy.
+    print(f"unresolved: {report.failed_binaries}", file=sys.stderr)
+
 if not report.is_clean():
     for pkg in report.orphans:
-        print(pkg)  # source package names
+        print(pkg)
+    sys.exit(2)
+
+sys.exit(0)
 ```
 
-All pipeline stages accept injectable providers for testing without real subprocess calls:
-
-```python
-from compose_orphans import check_orphans, Config
-
-report = check_orphans(
-    Config(project="SUSE:SLFO:Main"),
-    runner=my_runner,
-    binaries_provider=my_binaries_fn,
-    sources_resolver=my_sources_fn,
-    maintainership_provider=my_maintainership_fn,
-)
-```
-
-| Parameter | Signature | Description |
-|---|---|---|
-| `runner` | `(argv, *, timeout, cwd) → CompletedProcess[str]` | Subprocess seam forwarded to the binaries and sources stages. Defaults to the real subprocess runner. |
-| `binaries_provider` | `(Config, Runner) → list[str]` | Extracts the names of newly-added binary packages. |
-| `sources_resolver` | `(list[str], Config, Runner) → tuple[list[str], list[str]]` | Maps binary names to source package names via OBS. Returns `(resolved, failed)`. |
-| `maintainership_provider` | `(Config, Runner) → dict` | Fetches the SLFO maintainership database. |
+`Config()` with no arguments reads all settings from environment variables. Constructor arguments override the corresponding env var. See the [CLI reference](#cli-reference) for the full list of env vars and defaults.
 
 > **Early exit:** when `binaries_provider` returns an empty list, the pipeline
 > short-circuits — `sources_resolver` and `maintainership_provider` are NOT
@@ -91,7 +96,29 @@ report = check_orphans(
 > **Note:** `runner` is not forwarded to the maintainership stage — that stage requires
 > a binary-output subprocess protocol internally. To stub maintainership, supply
 > `maintainership_provider` directly.
+
+#### Stub seams for testing
+
+All pipeline stages accept injectable providers to avoid real subprocess calls in tests:
+
+```python
+from compose_orphans import check_orphans, Config
+
+report = check_orphans(
+    Config(project="SUSE:SLFO:Main"),
+    runner=my_runner,
+    binaries_provider=my_binaries_fn,
+    sources_resolver=my_sources_fn,
+    maintainership_provider=my_maintainership_fn,
+)
 ```
+
+| Parameter | Signature | Description |
+|---|---|---|
+| `runner` | `(argv, *, timeout, cwd) → CompletedProcess[str]` | Subprocess seam forwarded to the binaries and sources stages. Defaults to the real subprocess runner. |
+| `binaries_provider` | `(Config, Runner) → list[str]` | Extracts the names of newly-added binary packages. |
+| `sources_resolver` | `(list[str], Config, Runner) → tuple[list[str], list[str]]` | Maps binary names to source package names via OBS. Returns `(resolved, failed)`. |
+| `maintainership_provider` | `(Config, Runner) → dict` | Fetches the SLFO maintainership database. |
 
 ## CLI reference
 
