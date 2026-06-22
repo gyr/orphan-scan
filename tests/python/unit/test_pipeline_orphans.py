@@ -1,8 +1,8 @@
-"""Tests for compose_orphans.pipeline.orphans — find_orphans."""
+"""Tests for orphan_scan.pipeline.orphans — find_orphans."""
 
 from __future__ import annotations
 
-from compose_orphans.pipeline.orphans import find_orphans
+from orphan_scan.pipeline.orphans import find_orphans
 
 # ---------------------------------------------------------------------------
 # Helpers

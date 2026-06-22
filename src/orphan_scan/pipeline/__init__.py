@@ -6,13 +6,13 @@ import logging
 import time
 from typing import Callable
 
-from compose_orphans.config import Config
-from compose_orphans.pipeline.diff import extract_added_binaries
-from compose_orphans.pipeline.maintainership import PACKAGES_KEY, fetch_maintainership
-from compose_orphans.pipeline.orphans import find_orphans
-from compose_orphans.pipeline.sources import resolve_sources
-from compose_orphans.report import OrphanReport
-from compose_orphans.runner import Runner, default_runner
+from orphan_scan.config import Config
+from orphan_scan.pipeline.diff import extract_added_binaries
+from orphan_scan.pipeline.maintainership import PACKAGES_KEY, fetch_maintainership
+from orphan_scan.pipeline.orphans import find_orphans
+from orphan_scan.pipeline.sources import resolve_sources
+from orphan_scan.report import OrphanReport
+from orphan_scan.runner import Runner, default_runner
 
 _log = logging.getLogger(__name__)
 

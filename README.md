@@ -1,10 +1,10 @@
-# compose-orphans — SLES orphan-package detector
+# orphan-scan — SLES orphan-package detector
 
 Detects source packages newly added to the SLES product compose that have no
 maintainer registered in the SLFO maintainership database. Designed to run as a
 CI gate and exit non-zero whenever orphans are found.
 
-Python implementation. Distribution name: `compose-orphans`, import name: `compose_orphans`. For the original shell script see [README-bot.md](README-bot.md).
+Python implementation. Distribution name: `orphan-scan`, import name: `orphan_scan`. For the original shell script see [README-bot.md](README-bot.md).
 
 ## Requirements
 
@@ -27,10 +27,10 @@ uv sync --extra dev
 ### CLI
 
 ```sh
-compose-orphans                          # detect orphans using defaults
-compose-orphans --project SUSE:SLFO:Main
-compose-orphans --output json            # machine-readable output
-compose-orphans --quiet --output json > orphans.json   # CI usage
+orphan-scan                          # detect orphans using defaults
+orphan-scan --project SUSE:SLFO:Main
+orphan-scan --output json            # machine-readable output
+orphan-scan --quiet --output json > orphans.json   # CI usage
 ```
 
 ### Library
@@ -39,7 +39,7 @@ CI gate — call `check_orphans`, handle errors, inspect `failed_binaries`:
 
 ```python
 import sys
-from compose_orphans import check_orphans, Config, NetworkTimeout, PipelineError
+from orphan_scan import check_orphans, Config, NetworkTimeout, PipelineError
 
 config = Config(
     project="SUSE:SLFO:Main",
@@ -102,7 +102,7 @@ sys.exit(0)
 All pipeline stages accept injectable providers to avoid real subprocess calls in tests:
 
 ```python
-from compose_orphans import check_orphans, Config
+from orphan_scan import check_orphans, Config
 
 report = check_orphans(
     Config(project="SUSE:SLFO:Main"),
@@ -128,13 +128,13 @@ report = check_orphans(
 | `--version` | — | — | Print version and exit 0 |
 | `--quiet` | — | off | Suppress INFO logs (WARNING and above only) |
 | `--verbose` | — | off | Enable DEBUG logs and per-stage timings |
-| `--project NAME` | `COMPOSE_ORPHANS_PROJECT` | `SUSE:SLFO:Main` | OBS build project |
-| `--file PATH` | `COMPOSE_ORPHANS_FILE` | `000productcompose/default.productcompose` | productcompose path |
-| `--output FORMAT` | `COMPOSE_ORPHANS_OUTPUT` | `text` | `text` or `json` |
-| `--timeout SECS` | `COMPOSE_ORPHANS_TIMEOUT` | `30` | Network timeout in seconds |
-| `--branch BRANCH` | `COMPOSE_ORPHANS_BRANCH` | (none) | Target git branch for probe and clone |
-| `--maintainership-ref REF` | `COMPOSE_ORPHANS_MAINTAINERSHIP_REF` | `slfo-main` | Git ref for the SLFO maintainership archive |
-| `--partial-clone` | `COMPOSE_ORPHANS_PARTIAL_CLONE` | off | Use `git --filter=blob:none` in the clone fallback (experimental) |
+| `--project NAME` | `ORPHAN_SCAN_PROJECT` | `SUSE:SLFO:Main` | OBS build project |
+| `--file PATH` | `ORPHAN_SCAN_FILE` | `000productcompose/default.productcompose` | productcompose path |
+| `--output FORMAT` | `ORPHAN_SCAN_OUTPUT` | `text` | `text` or `json` |
+| `--timeout SECS` | `ORPHAN_SCAN_TIMEOUT` | `30` | Network timeout in seconds |
+| `--branch BRANCH` | `ORPHAN_SCAN_BRANCH` | (none) | Target git branch for probe and clone |
+| `--maintainership-ref REF` | `ORPHAN_SCAN_MAINTAINERSHIP_REF` | `slfo-main` | Git ref for the SLFO maintainership archive |
+| `--partial-clone` | `ORPHAN_SCAN_PARTIAL_CLONE` | off | Use `git --filter=blob:none` in the clone fallback (experimental) |
 | `--log-format FORMAT` | — | `text` | `text` or `json` log formatter |
 | `--strict` | — | off | Exit 2 when failed binaries present, even with no orphans |
 
@@ -154,7 +154,7 @@ Flag value beats env var beats default.
 ## Public API
 
 ```python
-from compose_orphans import (
+from orphan_scan import (
     check_orphans,       # orchestrator — main entry point
     Config,              # runtime configuration dataclass
     OrphanReport,        # immutable result (orphans, checked, failed_binaries)

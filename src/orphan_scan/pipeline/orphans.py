@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from compose_orphans.pipeline.maintainership import PACKAGES_KEY
+from orphan_scan.pipeline.maintainership import PACKAGES_KEY
 
 
 def _is_orphan(db: dict[str, Any], pkg: str) -> bool:

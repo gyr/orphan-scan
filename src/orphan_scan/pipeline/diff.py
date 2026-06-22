@@ -9,11 +9,11 @@ from contextlib import nullcontext
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from compose_orphans.exceptions import PipelineError, PipelineErrorReason
+from orphan_scan.exceptions import PipelineError, PipelineErrorReason
 
 if TYPE_CHECKING:
-    from compose_orphans.config import Config
-    from compose_orphans.runner import Runner
+    from orphan_scan.config import Config
+    from orphan_scan.runner import Runner
 
 DEFAULT_PRODUCTCOMPOSE = Path("000productcompose/default.productcompose")
 _SLES_GIT_URL = "gitea@src.suse.de:products/SLES.git"

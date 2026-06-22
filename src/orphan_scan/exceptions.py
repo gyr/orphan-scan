@@ -1,4 +1,4 @@
-"""Exception hierarchy for compose-orphans: network, pipeline."""
+"""Exception hierarchy for orphan-scan: network, pipeline."""
 
 from __future__ import annotations
 
@@ -6,7 +6,7 @@ from enum import Enum
 
 
 class BugownerError(Exception):
-    """Base exception for all compose-orphans errors."""
+    """Base exception for all orphan-scan errors."""
 
 
 class PipelineErrorReason(Enum):

@@ -10,11 +10,11 @@ from __future__ import annotations
 import xml.etree.ElementTree as ET  # nosec B405 - size cap + DOCTYPE check applied before any parse; stdlib-only per spec
 from typing import TYPE_CHECKING
 
-from compose_orphans.exceptions import PipelineError, PipelineErrorReason
+from orphan_scan.exceptions import PipelineError, PipelineErrorReason
 
 if TYPE_CHECKING:
-    from compose_orphans.config import Config
-    from compose_orphans.runner import Runner
+    from orphan_scan.config import Config
+    from orphan_scan.runner import Runner
 
 _MAX_BYTES = 50 * 1024 * 1024  # 50 MB hard cap before ElementTree parse
 _DOCTYPE_SCAN_BYTES = 512  # DOCTYPE precedes root element; this window is sufficient

@@ -1,4 +1,4 @@
-"""Tests for compose_orphans.runner — Runner protocol and default_runner.
+"""Tests for orphan_scan.runner — Runner protocol and default_runner.
 
 Security invariants under test:
 (a) argv is always list[str], never a single shell string.
@@ -18,7 +18,7 @@ from unittest.mock import patch
 
 import pytest
 
-from compose_orphans.runner import Runner, default_runner
+from orphan_scan.runner import Runner, default_runner
 
 # ---------------------------------------------------------------------------
 # Smoke test — default_runner returns a CompletedProcess
@@ -84,7 +84,7 @@ def test_default_runner_inherits_parent_env_by_not_passing_env_kwarg() -> None:
 
 def test_default_runner_forwards_cwd_to_subprocess_run(tmp_path: Path) -> None:
     """default_runner passes the cwd argument through to subprocess.run."""
-    with patch("compose_orphans.runner.subprocess.run") as mock_run:
+    with patch("orphan_scan.runner.subprocess.run") as mock_run:
         mock_run.return_value = subprocess.CompletedProcess(
             args=["true"], returncode=0, stdout="", stderr=""
         )
@@ -96,7 +96,7 @@ def test_default_runner_forwards_cwd_to_subprocess_run(tmp_path: Path) -> None:
 
 def test_default_runner_forwards_none_cwd_to_subprocess_run() -> None:
     """default_runner passes cwd=None (the default) through to subprocess.run."""
-    with patch("compose_orphans.runner.subprocess.run") as mock_run:
+    with patch("orphan_scan.runner.subprocess.run") as mock_run:
         mock_run.return_value = subprocess.CompletedProcess(
             args=["true"], returncode=0, stdout="", stderr=""
         )
@@ -184,7 +184,7 @@ def test_default_runner_returns_string_stdout_and_stderr() -> None:
 
 def test_default_runner_forwards_timeout_to_subprocess_run() -> None:
     """default_runner passes the timeout argument through to subprocess.run."""
-    with patch("compose_orphans.runner.subprocess.run") as mock_run:
+    with patch("orphan_scan.runner.subprocess.run") as mock_run:
         mock_run.return_value = subprocess.CompletedProcess(
             args=["true"], returncode=0, stdout="", stderr=""
         )
@@ -195,7 +195,7 @@ def test_default_runner_forwards_timeout_to_subprocess_run() -> None:
 
 def test_default_runner_uses_capture_output_and_text_mode() -> None:
     """default_runner must set capture_output=True and text=True (str output)."""
-    with patch("compose_orphans.runner.subprocess.run") as mock_run:
+    with patch("orphan_scan.runner.subprocess.run") as mock_run:
         mock_run.return_value = subprocess.CompletedProcess(
             args=["true"], returncode=0, stdout="", stderr=""
         )

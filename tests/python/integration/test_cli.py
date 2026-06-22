@@ -1,4 +1,4 @@
-"""Integration tests for the compose-orphans CLI (cli.py / __main__.py)."""
+"""Integration tests for the orphan-scan CLI (cli.py / __main__.py)."""
 
 from __future__ import annotations
 
@@ -6,13 +6,13 @@ import json
 
 import pytest
 
-from compose_orphans.cli import main
-from compose_orphans.exceptions import (
+from orphan_scan.cli import main
+from orphan_scan.exceptions import (
     NetworkTimeout,
     PipelineError,
     PipelineErrorReason,
 )
-from compose_orphans.report import OrphanReport
+from orphan_scan.report import OrphanReport
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -36,18 +36,18 @@ def _raise(exc: BaseException) -> None:
 
 
 # ---------------------------------------------------------------------------
-# 1. --help exits 0 and stdout contains "compose-orphans"
+# 1. --help exits 0 and stdout contains "orphan-scan"
 # ---------------------------------------------------------------------------
 
 
-def test_help_exits_zero_and_mentions_compose_orphans(
+def test_help_exits_zero_and_mentions_orphan_scan(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     with pytest.raises(SystemExit) as exc_info:
         main(["--help"])
     assert exc_info.value.code == 0
     captured = capsys.readouterr()
-    assert "compose-orphans" in captured.out.lower()
+    assert "orphan-scan" in captured.out.lower()
 
 
 # ---------------------------------------------------------------------------
@@ -62,7 +62,7 @@ def test_version_exits_zero_and_prints_version(
         main(["--version"])
     assert exc_info.value.code == 0
     captured = capsys.readouterr()
-    assert "compose-orphans" in captured.out.lower()
+    assert "orphan-scan" in captured.out.lower()
 
 
 # ---------------------------------------------------------------------------
@@ -83,7 +83,7 @@ def test_unknown_flag_exits_64() -> None:
 
 def test_clean_run_exits_zero(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(
-        "compose_orphans.cli.check_orphans", lambda *a, **kw: _clean_report()
+        "orphan_scan.cli.check_orphans", lambda *a, **kw: _clean_report()
     )
     with pytest.raises(SystemExit) as exc_info:
         main(["--project", "SUSE:SLFO:Main"])
@@ -97,7 +97,7 @@ def test_clean_run_exits_zero(monkeypatch: pytest.MonkeyPatch) -> None:
 
 def test_orphans_found_exits_2(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(
-        "compose_orphans.cli.check_orphans", lambda *a, **kw: _orphan_report()
+        "orphan_scan.cli.check_orphans", lambda *a, **kw: _orphan_report()
     )
     with pytest.raises(SystemExit) as exc_info:
         main(["--project", "SUSE:SLFO:Main"])
@@ -111,7 +111,7 @@ def test_orphans_found_exits_2(monkeypatch: pytest.MonkeyPatch) -> None:
 
 def test_strict_with_failed_binaries_exits_2(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(
-        "compose_orphans.cli.check_orphans", lambda *a, **kw: _failed_binary_report()
+        "orphan_scan.cli.check_orphans", lambda *a, **kw: _failed_binary_report()
     )
     with pytest.raises(SystemExit) as exc_info:
         main(["--strict"])
@@ -125,7 +125,7 @@ def test_strict_with_failed_binaries_exits_2(monkeypatch: pytest.MonkeyPatch) ->
 
 def test_strict_no_failed_binaries_exits_zero(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(
-        "compose_orphans.cli.check_orphans", lambda *a, **kw: _clean_report()
+        "orphan_scan.cli.check_orphans", lambda *a, **kw: _clean_report()
     )
     with pytest.raises(SystemExit) as exc_info:
         main(["--strict"])
@@ -142,9 +142,7 @@ def test_file_not_found_exits_127_with_stderr_message(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     exc = FileNotFoundError(2, "No such file or directory", "osc")
-    monkeypatch.setattr(
-        "compose_orphans.cli.check_orphans", lambda *a, **kw: _raise(exc)
-    )
+    monkeypatch.setattr("orphan_scan.cli.check_orphans", lambda *a, **kw: _raise(exc))
     with pytest.raises(SystemExit) as exc_info:
         main([])
     assert exc_info.value.code == 127
@@ -162,9 +160,7 @@ def test_network_timeout_exits_124(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     exc = NetworkTimeout("osc-whois", 30.0)
-    monkeypatch.setattr(
-        "compose_orphans.cli.check_orphans", lambda *a, **kw: _raise(exc)
-    )
+    monkeypatch.setattr("orphan_scan.cli.check_orphans", lambda *a, **kw: _raise(exc))
     with pytest.raises(SystemExit) as exc_info:
         main([])
     assert exc_info.value.code == 124
@@ -182,9 +178,7 @@ def test_pipeline_error_exits_1(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     exc = PipelineError(PipelineErrorReason.NO_PRODUCTCOMPOSE_HISTORY, "no history")
-    monkeypatch.setattr(
-        "compose_orphans.cli.check_orphans", lambda *a, **kw: _raise(exc)
-    )
+    monkeypatch.setattr("orphan_scan.cli.check_orphans", lambda *a, **kw: _raise(exc))
     with pytest.raises(SystemExit) as exc_info:
         main([])
     assert exc_info.value.code == 1
@@ -199,7 +193,7 @@ def test_pipeline_error_exits_1(
 
 def test_uncaught_exception_exits_1(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(
-        "compose_orphans.cli.check_orphans",
+        "orphan_scan.cli.check_orphans",
         lambda *a, **kw: _raise(RuntimeError("boom")),
     )
     with pytest.raises(SystemExit) as exc_info:
@@ -217,7 +211,7 @@ def test_output_json_is_valid_json(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     monkeypatch.setattr(
-        "compose_orphans.cli.check_orphans", lambda *a, **kw: _clean_report()
+        "orphan_scan.cli.check_orphans", lambda *a, **kw: _clean_report()
     )
     with pytest.raises(SystemExit):
         main(["--output", "json"])
@@ -228,7 +222,7 @@ def test_output_json_is_valid_json(
 
 
 # ---------------------------------------------------------------------------
-# 13. Env var COMPOSE_ORPHANS_OUTPUT=json is honored (no flag override)
+# 13. Env var ORPHAN_SCAN_OUTPUT=json is honored (no flag override)
 # ---------------------------------------------------------------------------
 
 
@@ -236,9 +230,9 @@ def test_env_var_output_json_is_honored(
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    monkeypatch.setenv("COMPOSE_ORPHANS_OUTPUT", "json")
+    monkeypatch.setenv("ORPHAN_SCAN_OUTPUT", "json")
     monkeypatch.setattr(
-        "compose_orphans.cli.check_orphans", lambda *a, **kw: _clean_report()
+        "orphan_scan.cli.check_orphans", lambda *a, **kw: _clean_report()
     )
     with pytest.raises(SystemExit):
         main([])
@@ -248,7 +242,7 @@ def test_env_var_output_json_is_honored(
 
 
 # ---------------------------------------------------------------------------
-# 14. Flag --output json overrides env var COMPOSE_ORPHANS_OUTPUT=text
+# 14. Flag --output json overrides env var ORPHAN_SCAN_OUTPUT=text
 # ---------------------------------------------------------------------------
 
 
@@ -256,9 +250,9 @@ def test_flag_output_overrides_env_var(
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    monkeypatch.setenv("COMPOSE_ORPHANS_OUTPUT", "text")
+    monkeypatch.setenv("ORPHAN_SCAN_OUTPUT", "text")
     monkeypatch.setattr(
-        "compose_orphans.cli.check_orphans", lambda *a, **kw: _clean_report()
+        "orphan_scan.cli.check_orphans", lambda *a, **kw: _clean_report()
     )
     with pytest.raises(SystemExit):
         main(["--output", "json"])
@@ -276,7 +270,7 @@ def test_quiet_flag_sets_warning_level(monkeypatch: pytest.MonkeyPatch) -> None:
     import logging
 
     monkeypatch.setattr(
-        "compose_orphans.cli.check_orphans", lambda *a, **kw: _clean_report()
+        "orphan_scan.cli.check_orphans", lambda *a, **kw: _clean_report()
     )
     with pytest.raises(SystemExit) as exc_info:
         main(["--quiet"])
@@ -293,7 +287,7 @@ def test_verbose_flag_sets_debug_level(monkeypatch: pytest.MonkeyPatch) -> None:
     import logging
 
     monkeypatch.setattr(
-        "compose_orphans.cli.check_orphans", lambda *a, **kw: _clean_report()
+        "orphan_scan.cli.check_orphans", lambda *a, **kw: _clean_report()
     )
     with pytest.raises(SystemExit) as exc_info:
         main(["--verbose"])
@@ -308,7 +302,7 @@ def test_verbose_flag_sets_debug_level(monkeypatch: pytest.MonkeyPatch) -> None:
 
 def test_log_format_json_smoke(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(
-        "compose_orphans.cli.check_orphans", lambda *a, **kw: _clean_report()
+        "orphan_scan.cli.check_orphans", lambda *a, **kw: _clean_report()
     )
     with pytest.raises(SystemExit) as exc_info:
         main(["--log-format", "json"])
@@ -327,7 +321,7 @@ def test_verbose_and_quiet_together_exits_64() -> None:
 
 
 # ---------------------------------------------------------------------------
-# 19. Invalid env var (COMPOSE_ORPHANS_TIMEOUT=bad) → exit 64 with "configuration error"
+# 19. Invalid env var (ORPHAN_SCAN_TIMEOUT=bad) → exit 64 with "configuration error"
 # ---------------------------------------------------------------------------
 
 
@@ -335,7 +329,7 @@ def test_invalid_env_var_exits_64_with_config_error(
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    monkeypatch.setenv("COMPOSE_ORPHANS_TIMEOUT", "not-a-number")
+    monkeypatch.setenv("ORPHAN_SCAN_TIMEOUT", "not-a-number")
     with pytest.raises(SystemExit) as exc_info:
         main([])
     assert exc_info.value.code == 64
@@ -355,12 +349,12 @@ def test_cli_branch_flag_forwards_to_config(
 
     def fake_check_orphans(config):  # type: ignore[no-untyped-def]
         captured["branch"] = config.branch
-        from compose_orphans.report import OrphanReport
+        from orphan_scan.report import OrphanReport
 
         return OrphanReport(orphans=[], checked=0, failed_binaries=[])
 
-    monkeypatch.setattr("compose_orphans.cli.check_orphans", fake_check_orphans)
-    from compose_orphans.cli import main
+    monkeypatch.setattr("orphan_scan.cli.check_orphans", fake_check_orphans)
+    from orphan_scan.cli import main
 
     with pytest.raises(SystemExit) as exc_info:
         main(["--branch", "16.1"])
@@ -380,12 +374,12 @@ def test_cli_maintainership_ref_flag_forwards_to_config(
 
     def fake_check_orphans(config):  # type: ignore[no-untyped-def]
         captured["maintainership_ref"] = config.maintainership_ref
-        from compose_orphans.report import OrphanReport
+        from orphan_scan.report import OrphanReport
 
         return OrphanReport(orphans=[], checked=0, failed_binaries=[])
 
-    monkeypatch.setattr("compose_orphans.cli.check_orphans", fake_check_orphans)
-    from compose_orphans.cli import main
+    monkeypatch.setattr("orphan_scan.cli.check_orphans", fake_check_orphans)
+    from orphan_scan.cli import main
 
     with pytest.raises(SystemExit) as exc_info:
         main(["--maintainership-ref", "slfo-15.6"])
@@ -405,12 +399,12 @@ def test_cli_partial_clone_flag_forwards_to_config(
 
     def fake_check_orphans(config):  # type: ignore[no-untyped-def]
         captured["partial_clone"] = config.partial_clone
-        from compose_orphans.report import OrphanReport
+        from orphan_scan.report import OrphanReport
 
         return OrphanReport(orphans=[], checked=0, failed_binaries=[])
 
-    monkeypatch.setattr("compose_orphans.cli.check_orphans", fake_check_orphans)
-    from compose_orphans.cli import main
+    monkeypatch.setattr("orphan_scan.cli.check_orphans", fake_check_orphans)
+    from orphan_scan.cli import main
 
     with pytest.raises(SystemExit) as exc_info:
         main(["--partial-clone"])
@@ -425,14 +419,14 @@ def test_cli_no_partial_clone_flag_defaults_to_false(
 
     def fake_check_orphans(config):  # type: ignore[no-untyped-def]
         captured["partial_clone"] = config.partial_clone
-        from compose_orphans.report import OrphanReport
+        from orphan_scan.report import OrphanReport
 
         return OrphanReport(orphans=[], checked=0, failed_binaries=[])
 
-    monkeypatch.setattr("compose_orphans.cli.check_orphans", fake_check_orphans)
+    monkeypatch.setattr("orphan_scan.cli.check_orphans", fake_check_orphans)
     # Also clear the env var so the default propagates
-    monkeypatch.delenv("COMPOSE_ORPHANS_PARTIAL_CLONE", raising=False)
-    from compose_orphans.cli import main
+    monkeypatch.delenv("ORPHAN_SCAN_PARTIAL_CLONE", raising=False)
+    from orphan_scan.cli import main
 
     with pytest.raises(SystemExit) as exc_info:
         main([])
@@ -443,7 +437,7 @@ def test_cli_no_partial_clone_flag_defaults_to_false(
 def test_cli_env_partial_clone_true_without_flag_preserves_env(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Env var COMPOSE_ORPHANS_PARTIAL_CLONE=1 without --partial-clone
+    """Env var ORPHAN_SCAN_PARTIAL_CLONE=1 without --partial-clone
     flag MUST yield Config.partial_clone == True (env-precedence pin).
 
     This test pins the `if args.partial_clone:` invariant at plan
@@ -455,13 +449,13 @@ def test_cli_env_partial_clone_true_without_flag_preserves_env(
 
     def fake_check_orphans(config):  # type: ignore[no-untyped-def]
         captured["partial_clone"] = config.partial_clone
-        from compose_orphans.report import OrphanReport
+        from orphan_scan.report import OrphanReport
 
         return OrphanReport(orphans=[], checked=0, failed_binaries=[])
 
-    monkeypatch.setattr("compose_orphans.cli.check_orphans", fake_check_orphans)
-    monkeypatch.setenv("COMPOSE_ORPHANS_PARTIAL_CLONE", "1")
-    from compose_orphans.cli import main
+    monkeypatch.setattr("orphan_scan.cli.check_orphans", fake_check_orphans)
+    monkeypatch.setenv("ORPHAN_SCAN_PARTIAL_CLONE", "1")
+    from orphan_scan.cli import main
 
     with pytest.raises(SystemExit) as exc_info:
         main([])

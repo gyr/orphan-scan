@@ -12,14 +12,14 @@ from typing import TYPE_CHECKING, Any
 
 import pytest
 
-from compose_orphans.config import Config
-from compose_orphans.exceptions import (
+from orphan_scan.config import Config
+from orphan_scan.exceptions import (
     NetworkTimeout,
     PipelineError,
     PipelineErrorReason,
 )
-from compose_orphans.pipeline import check_orphans
-from compose_orphans.report import OrphanReport
+from orphan_scan.pipeline import check_orphans
+from orphan_scan.report import OrphanReport
 
 if TYPE_CHECKING:
     import subprocess
@@ -161,13 +161,13 @@ def test_network_timeout_propagates() -> None:
     assert exc_info.value.label == "fetch"
 
 
-def test_public_api_importable_from_compose_orphans() -> None:
-    """Public API symbols are importable from compose_orphans."""
+def test_public_api_importable_from_orphan_scan() -> None:
+    """Public API symbols are importable from orphan_scan."""
     # These imports are the assertions — if any raises, the test fails.
-    from compose_orphans import Config as C
-    from compose_orphans import OrphanReport as R
-    from compose_orphans import Runner as Ru
-    from compose_orphans import check_orphans as fn
+    from orphan_scan import Config as C
+    from orphan_scan import OrphanReport as R
+    from orphan_scan import Runner as Ru
+    from orphan_scan import check_orphans as fn
 
     assert C is Config
     assert R is OrphanReport
@@ -225,7 +225,7 @@ def test_verbose_debug_logs_emitted_for_each_stage(
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """check_orphans emits DEBUG records per stage, including non-empty list details."""
-    with caplog.at_level(logging.DEBUG, logger="compose_orphans.pipeline"):
+    with caplog.at_level(logging.DEBUG, logger="orphan_scan.pipeline"):
         check_orphans(
             config=Config(),
             runner=_noop_runner,
@@ -246,7 +246,7 @@ def test_verbose_debug_logs_emitted_for_each_stage(
 
     # Empty lists must not produce detail log lines.
     caplog.clear()
-    with caplog.at_level(logging.DEBUG, logger="compose_orphans.pipeline"):
+    with caplog.at_level(logging.DEBUG, logger="orphan_scan.pipeline"):
         check_orphans(
             config=Config(),
             runner=_noop_runner,
@@ -264,7 +264,7 @@ def test_info_logs_emitted_for_stage_milestones(
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """check_orphans emits INFO records for stage milestone counts."""
-    with caplog.at_level(logging.INFO, logger="compose_orphans.pipeline"):
+    with caplog.at_level(logging.INFO, logger="orphan_scan.pipeline"):
         check_orphans(
             config=Config(),
             runner=_noop_runner,
@@ -329,7 +329,7 @@ def test_empty_binaries_emits_skip_info_log(caplog: pytest.LogCaptureFixture) ->
     """When binaries == [], an INFO log explains the skip."""
     import logging
 
-    with caplog.at_level(logging.INFO, logger="compose_orphans.pipeline"):
+    with caplog.at_level(logging.INFO, logger="orphan_scan.pipeline"):
         check_orphans(
             Config(),
             binaries_provider=lambda cfg, run: [],
@@ -349,7 +349,7 @@ def test_quiet_suppresses_info_logs(
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """At WARNING level, no INFO milestone messages are emitted."""
-    with caplog.at_level(logging.WARNING, logger="compose_orphans.pipeline"):
+    with caplog.at_level(logging.WARNING, logger="orphan_scan.pipeline"):
         check_orphans(
             config=Config(),
             runner=_noop_runner,

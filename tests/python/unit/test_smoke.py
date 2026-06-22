@@ -5,19 +5,19 @@ import importlib
 import pytest
 
 _SUBMODULES = [
-    "compose_orphans",
-    "compose_orphans.cli",
-    "compose_orphans.config",
-    "compose_orphans.exceptions",
-    "compose_orphans.logging_setup",
-    "compose_orphans.network",
-    "compose_orphans.report",
-    "compose_orphans.runner",
-    "compose_orphans.pipeline",
-    "compose_orphans.pipeline.diff",
-    "compose_orphans.pipeline.maintainership",
-    "compose_orphans.pipeline.orphans",
-    "compose_orphans.pipeline.sources",
+    "orphan_scan",
+    "orphan_scan.cli",
+    "orphan_scan.config",
+    "orphan_scan.exceptions",
+    "orphan_scan.logging_setup",
+    "orphan_scan.network",
+    "orphan_scan.report",
+    "orphan_scan.runner",
+    "orphan_scan.pipeline",
+    "orphan_scan.pipeline.diff",
+    "orphan_scan.pipeline.maintainership",
+    "orphan_scan.pipeline.orphans",
+    "orphan_scan.pipeline.sources",
 ]
 
 

@@ -1,4 +1,4 @@
-"""Tests for compose_orphans.pipeline.maintainership — fetch_maintainership."""
+"""Tests for orphan_scan.pipeline.maintainership — fetch_maintainership."""
 
 from __future__ import annotations
 
@@ -11,7 +11,7 @@ from typing import TYPE_CHECKING
 
 import pytest
 
-from compose_orphans.exceptions import (
+from orphan_scan.exceptions import (
     NetworkTimeout,
     PipelineError,
     PipelineErrorReason,
@@ -89,13 +89,13 @@ class FakeBinaryRunner:
 
 
 # ---------------------------------------------------------------------------
-# Cycle 1: BinaryRunner importable from compose_orphans.runner
+# Cycle 1: BinaryRunner importable from orphan_scan.runner
 # ---------------------------------------------------------------------------
 
 
 def test_binary_runner_protocol_in_runner_module() -> None:
-    """BinaryRunner from compose_orphans.runner is runtime_checkable."""
-    from compose_orphans.runner import BinaryRunner
+    """BinaryRunner from orphan_scan.runner is runtime_checkable."""
+    from orphan_scan.runner import BinaryRunner
 
     # Annotations are strings at runtime (from __future__ import annotations), so
     # Path does not need to be imported here — @runtime_checkable only checks __call__.
@@ -117,7 +117,7 @@ def test_binary_runner_protocol_in_runner_module() -> None:
 
 def test_default_binary_runner_returns_bytes() -> None:
     """default_binary_runner stdout and stderr are bytes, not str."""
-    from compose_orphans.runner import default_binary_runner
+    from orphan_scan.runner import default_binary_runner
 
     proc = default_binary_runner(["echo", "hi"], timeout=5)
     assert isinstance(proc.stdout, bytes), (
@@ -139,7 +139,7 @@ def test_default_binary_runner_never_sets_shell_true() -> None:
     import inspect
     import textwrap
 
-    from compose_orphans.runner import default_binary_runner
+    from orphan_scan.runner import default_binary_runner
 
     source = textwrap.dedent(inspect.getsource(default_binary_runner))
     tree = ast.parse(source)
@@ -161,7 +161,7 @@ def test_default_binary_runner_never_sets_shell_true() -> None:
 
 def test_fetch_maintainership_success() -> None:
     """fetch_maintainership returns parsed dict on a valid in-memory tar."""
-    from compose_orphans.pipeline.maintainership import fetch_maintainership
+    from orphan_scan.pipeline.maintainership import fetch_maintainership
 
     payload = {"packages": {"foo": {"users": ["alice"]}}}
     json_bytes = json.dumps(payload).encode()
@@ -178,7 +178,7 @@ def test_fetch_maintainership_success() -> None:
 
 def test_fetch_maintainership_timeout() -> None:
     """fetch_maintainership raises NetworkTimeout when runner raises TimeoutExpired."""
-    from compose_orphans.pipeline.maintainership import fetch_maintainership
+    from orphan_scan.pipeline.maintainership import fetch_maintainership
 
     exc = subprocess.TimeoutExpired(["git"], 30)
     runner = FakeBinaryRunner(raises=exc)
@@ -194,7 +194,7 @@ def test_fetch_maintainership_timeout() -> None:
 
 def test_fetch_maintainership_nonzero_exit() -> None:
     """fetch_maintainership raises PipelineError(FETCH_FAILED) on non-zero rc."""
-    from compose_orphans.pipeline.maintainership import fetch_maintainership
+    from orphan_scan.pipeline.maintainership import fetch_maintainership
 
     runner = FakeBinaryRunner(returncode=128, stdout=b"", stderr=b"fatal: ...")
     with pytest.raises(PipelineError) as exc_info:
@@ -209,7 +209,7 @@ def test_fetch_maintainership_nonzero_exit() -> None:
 
 def test_fetch_maintainership_tar_too_large() -> None:
     """fetch_maintainership raises PipelineError when stdout exceeds 50 MB."""
-    from compose_orphans.pipeline.maintainership import fetch_maintainership
+    from orphan_scan.pipeline.maintainership import fetch_maintainership
 
     oversized = b"\x00" * (50 * 1024 * 1024 + 1)
     runner = FakeBinaryRunner(returncode=0, stdout=oversized, stderr=b"")
@@ -225,7 +225,7 @@ def test_fetch_maintainership_tar_too_large() -> None:
 
 def test_fetch_maintainership_bad_tar() -> None:
     """fetch_maintainership raises PipelineError(FETCH_FAILED) with TarError cause."""
-    from compose_orphans.pipeline.maintainership import fetch_maintainership
+    from orphan_scan.pipeline.maintainership import fetch_maintainership
 
     runner = FakeBinaryRunner(returncode=0, stdout=b"not a tar", stderr=b"")
     with pytest.raises(PipelineError) as exc_info:
@@ -241,7 +241,7 @@ def test_fetch_maintainership_bad_tar() -> None:
 
 def test_fetch_maintainership_missing_member() -> None:
     """fetch_maintainership raises PipelineError when _maintainership.json absent."""
-    from compose_orphans.pipeline.maintainership import fetch_maintainership
+    from orphan_scan.pipeline.maintainership import fetch_maintainership
 
     tar_bytes = make_tar("other.json", b'{"packages": {}}')
     runner = FakeBinaryRunner(returncode=0, stdout=tar_bytes, stderr=b"")
@@ -258,7 +258,7 @@ def test_fetch_maintainership_missing_member() -> None:
 
 def test_fetch_maintainership_json_too_large() -> None:
     """fetch_maintainership raises PipelineError when JSON bytes exceed 100 MB."""
-    from compose_orphans.pipeline.maintainership import fetch_maintainership
+    from orphan_scan.pipeline.maintainership import fetch_maintainership
 
     big_json = b"x" * (100 * 1024 * 1024 + 1)
     tar_bytes = make_tar("_maintainership.json", big_json)
@@ -275,7 +275,7 @@ def test_fetch_maintainership_json_too_large() -> None:
 
 def test_fetch_maintainership_invalid_json() -> None:
     """fetch_maintainership raises PipelineError(INVALID_JSON) with JSONDecodeError."""
-    from compose_orphans.pipeline.maintainership import fetch_maintainership
+    from orphan_scan.pipeline.maintainership import fetch_maintainership
 
     tar_bytes = make_tar("_maintainership.json", b"not json")
     runner = FakeBinaryRunner(returncode=0, stdout=tar_bytes, stderr=b"")
@@ -292,7 +292,7 @@ def test_fetch_maintainership_invalid_json() -> None:
 
 def test_fetch_maintainership_wrong_shape_not_dict() -> None:
     """fetch_maintainership raises PipelineError(INVALID_JSON) for non-dict root."""
-    from compose_orphans.pipeline.maintainership import fetch_maintainership
+    from orphan_scan.pipeline.maintainership import fetch_maintainership
 
     tar_bytes = make_tar("_maintainership.json", b"[]")
     runner = FakeBinaryRunner(returncode=0, stdout=tar_bytes, stderr=b"")
@@ -308,7 +308,7 @@ def test_fetch_maintainership_wrong_shape_not_dict() -> None:
 
 def test_fetch_maintainership_wrong_shape_no_packages() -> None:
     """fetch_maintainership raises PipelineError(INVALID_JSON): no 'packages' key."""
-    from compose_orphans.pipeline.maintainership import fetch_maintainership
+    from orphan_scan.pipeline.maintainership import fetch_maintainership
 
     tar_bytes = make_tar("_maintainership.json", b'{"other": 1}')
     runner = FakeBinaryRunner(returncode=0, stdout=tar_bytes, stderr=b"")
@@ -324,7 +324,7 @@ def test_fetch_maintainership_wrong_shape_no_packages() -> None:
 
 def test_fetch_maintainership_exception_chaining_tar_error() -> None:
     """PipelineError __cause__ for bad tar is a tarfile.TarError instance."""
-    from compose_orphans.pipeline.maintainership import fetch_maintainership
+    from orphan_scan.pipeline.maintainership import fetch_maintainership
 
     runner = FakeBinaryRunner(returncode=0, stdout=b"not a tar", stderr=b"")
     with pytest.raises(PipelineError) as exc_info:
@@ -339,7 +339,7 @@ def test_fetch_maintainership_exception_chaining_tar_error() -> None:
 
 def test_fetch_maintainership_exception_chaining_json_error() -> None:
     """PipelineError __cause__ for invalid JSON is a json.JSONDecodeError instance."""
-    from compose_orphans.pipeline.maintainership import fetch_maintainership
+    from orphan_scan.pipeline.maintainership import fetch_maintainership
 
     tar_bytes = make_tar("_maintainership.json", b"not json")
     runner = FakeBinaryRunner(returncode=0, stdout=tar_bytes, stderr=b"")
@@ -355,7 +355,7 @@ def test_fetch_maintainership_exception_chaining_json_error() -> None:
 
 def test_fetch_maintainership_argv_uses_default_ref() -> None:
     """Default Config.maintainership_ref ('slfo-main') flows into argv."""
-    from compose_orphans.pipeline.maintainership import fetch_maintainership
+    from orphan_scan.pipeline.maintainership import fetch_maintainership
 
     payload = {"packages": {}}
     json_bytes = json.dumps(payload).encode()
@@ -374,7 +374,7 @@ def test_fetch_maintainership_argv_uses_default_ref() -> None:
 
 def test_fetch_maintainership_argv_honors_override_ref() -> None:
     """Override Config.maintainership_ref flows into argv at position [-2]."""
-    from compose_orphans.pipeline.maintainership import fetch_maintainership
+    from orphan_scan.pipeline.maintainership import fetch_maintainership
 
     class _OverrideConfig:
         timeout = 30
@@ -403,14 +403,12 @@ def test_fetch_maintainership_logs_debug_ref(
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """fetch_maintainership emits a DEBUG log naming the ref being fetched."""
-    from compose_orphans.pipeline.maintainership import fetch_maintainership
+    from orphan_scan.pipeline.maintainership import fetch_maintainership
 
     payload = {"packages": {}}
     tar_bytes = make_tar("_maintainership.json", json.dumps(payload).encode())
     runner = FakeBinaryRunner(returncode=0, stdout=tar_bytes, stderr=b"")
-    with caplog.at_level(
-        logging.DEBUG, logger="compose_orphans.pipeline.maintainership"
-    ):
+    with caplog.at_level(logging.DEBUG, logger="orphan_scan.pipeline.maintainership"):
         fetch_maintainership(_CONFIG, runner=runner)
     assert any(
         "slfo-main" in r.message and r.levelno == logging.DEBUG for r in caplog.records

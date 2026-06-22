@@ -1,4 +1,4 @@
-"""Tests for compose_orphans.pipeline.diff — extract_added_binaries."""
+"""Tests for orphan_scan.pipeline.diff — extract_added_binaries."""
 
 from __future__ import annotations
 
@@ -8,9 +8,9 @@ from pathlib import Path
 
 import pytest
 
-from compose_orphans.config import Config
-from compose_orphans.exceptions import PipelineError, PipelineErrorReason
-from compose_orphans.pipeline.diff import (
+from orphan_scan.config import Config
+from orphan_scan.exceptions import PipelineError, PipelineErrorReason
+from orphan_scan.pipeline.diff import (
     _SLES_GIT_URL,
     DEFAULT_PRODUCTCOMPOSE,
     extract_added_binaries,
@@ -418,7 +418,7 @@ def test_fallback_emits_warning_log(
             (show_argv, clone_dir): (0, ""),
         }
     )
-    with caplog.at_level(logging.WARNING, logger="compose_orphans.pipeline.diff"):
+    with caplog.at_level(logging.WARNING, logger="orphan_scan.pipeline.diff"):
         extract_added_binaries(
             config=_DEFAULT_CONFIG, runner=runner, _clone_dir=clone_dir
         )
@@ -646,7 +646,7 @@ def test_fallback_emits_debug_filter_when_partial_clone(
             (show_argv, clone_dir): (0, _SAMPLE_DIFF),
         }
     )
-    with caplog.at_level(logging.DEBUG, logger="compose_orphans.pipeline.diff"):
+    with caplog.at_level(logging.DEBUG, logger="orphan_scan.pipeline.diff"):
         extract_added_binaries(config=config, runner=runner, _clone_dir=clone_dir)
     debug_records = [r for r in caplog.records if r.levelno == logging.DEBUG]
     assert any("--filter=blob:none" in r.message for r in debug_records), (
@@ -670,7 +670,7 @@ def test_fallback_no_debug_filter_when_partial_clone_false(
             (show_argv, clone_dir): (0, _SAMPLE_DIFF),
         }
     )
-    with caplog.at_level(logging.DEBUG, logger="compose_orphans.pipeline.diff"):
+    with caplog.at_level(logging.DEBUG, logger="orphan_scan.pipeline.diff"):
         extract_added_binaries(
             config=_DEFAULT_CONFIG, runner=runner, _clone_dir=clone_dir
         )

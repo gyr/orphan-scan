@@ -1,10 +1,10 @@
-"""Tests for compose_orphans.exceptions — exception hierarchy."""
+"""Tests for orphan_scan.exceptions — exception hierarchy."""
 
 from __future__ import annotations
 
 import pytest
 
-from compose_orphans.exceptions import (
+from orphan_scan.exceptions import (
     BugownerError,
     NetworkTimeout,
     PipelineError,
@@ -134,17 +134,17 @@ def test_pipeline_error_supports_exception_chaining() -> None:
 
 
 # ---------------------------------------------------------------------------
-# Cycle 9 — Public API: all four names importable from compose_orphans and in __all__
+# Cycle 9 — Public API: all four names importable from orphan_scan and in __all__
 # ---------------------------------------------------------------------------
 
 
 def test_public_api_imports_and_all() -> None:
-    """Exception names importable from compose_orphans are listed in __all__."""
-    import compose_orphans  # noqa: PLC0415
-    from compose_orphans import BugownerError as PublicBugownerError  # noqa: PLC0415
-    from compose_orphans import NetworkTimeout as PublicNetworkTimeout  # noqa: PLC0415
-    from compose_orphans import PipelineError as PublicPipelineError  # noqa: PLC0415
-    from compose_orphans import (
+    """Exception names importable from orphan_scan are listed in __all__."""
+    import orphan_scan  # noqa: PLC0415
+    from orphan_scan import BugownerError as PublicBugownerError  # noqa: PLC0415
+    from orphan_scan import NetworkTimeout as PublicNetworkTimeout  # noqa: PLC0415
+    from orphan_scan import PipelineError as PublicPipelineError  # noqa: PLC0415
+    from orphan_scan import (
         PipelineErrorReason as PublicPipelineErrorReason,  # noqa: PLC0415
     )
 
@@ -155,9 +155,7 @@ def test_public_api_imports_and_all() -> None:
         "PipelineErrorReason",
     )
     for name in expected_names:
-        assert name in compose_orphans.__all__, (
-            f"{name!r} missing from compose_orphans.__all__"
-        )
+        assert name in orphan_scan.__all__, f"{name!r} missing from orphan_scan.__all__"
 
     # Verify the re-exports are the same objects as the originals
     assert PublicBugownerError is BugownerError

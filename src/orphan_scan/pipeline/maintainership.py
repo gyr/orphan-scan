@@ -12,16 +12,16 @@ import subprocess  # nosec B404 - imported for TimeoutExpired only; no command c
 import tarfile
 from typing import TYPE_CHECKING
 
-from compose_orphans.exceptions import (
+from orphan_scan.exceptions import (
     NetworkTimeout,
     PipelineError,
     PipelineErrorReason,
 )
-from compose_orphans.runner import default_binary_runner
+from orphan_scan.runner import default_binary_runner
 
 if TYPE_CHECKING:
-    from compose_orphans.config import Config
-    from compose_orphans.runner import BinaryRunner
+    from orphan_scan.config import Config
+    from orphan_scan.runner import BinaryRunner
 
 _log = logging.getLogger(__name__)
 

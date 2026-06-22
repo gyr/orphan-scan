@@ -1,4 +1,4 @@
-"""Tests for compose_orphans.network — run_with_timeout wrapper."""
+"""Tests for orphan_scan.network — run_with_timeout wrapper."""
 
 from __future__ import annotations
 
@@ -7,13 +7,13 @@ from typing import TYPE_CHECKING
 
 import pytest
 
-from compose_orphans.exceptions import NetworkTimeout
-from compose_orphans.network import run_with_timeout
+from orphan_scan.exceptions import NetworkTimeout
+from orphan_scan.network import run_with_timeout
 
 if TYPE_CHECKING:
     from pathlib import Path
 
-    from compose_orphans.runner import Runner
+    from orphan_scan.runner import Runner
 
 
 # ---------------------------------------------------------------------------

@@ -8,13 +8,13 @@ import sys
 from importlib.metadata import version as _pkg_version
 from pathlib import Path
 
-from compose_orphans.config import Config
-from compose_orphans.exceptions import NetworkTimeout, PipelineError
-from compose_orphans.logging_setup import setup_logging
-from compose_orphans.pipeline import check_orphans
-from compose_orphans.report import EMITTERS
+from orphan_scan.config import Config
+from orphan_scan.exceptions import NetworkTimeout, PipelineError
+from orphan_scan.logging_setup import setup_logging
+from orphan_scan.pipeline import check_orphans
+from orphan_scan.report import EMITTERS
 
-_VERSION = _pkg_version("compose-orphans")
+_VERSION = _pkg_version("orphan-scan")
 _log = logging.getLogger(__name__)
 
 # EX_USAGE (sysexits.h) — used when argparse would return exit 2
@@ -23,11 +23,11 @@ _EX_USAGE = 64
 
 def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        prog="compose-orphans",
+        prog="orphan-scan",
         description="Find orphan packages in the productcompose.",
     )
     parser.add_argument(
-        "--version", action="version", version=f"compose-orphans {_VERSION}"
+        "--version", action="version", version=f"orphan-scan {_VERSION}"
     )
     parser.add_argument(
         "--project",
@@ -121,7 +121,7 @@ def _parse_args(argv: list[str] | None) -> argparse.Namespace:
 
 
 def main(argv: list[str] | None = None) -> None:
-    """Entry point for the compose-orphans CLI.
+    """Entry point for the orphan-scan CLI.
 
     Args:
         argv: Argument list (defaults to ``sys.argv[1:]`` when ``None``).

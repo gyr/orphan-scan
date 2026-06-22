@@ -1,7 +1,7 @@
 """Runner protocol and default_runner: the single subprocess seam.
 
 This module defines the single point through which every subprocess call in
-compose-orphans flows.  Keeping all subprocess construction here enforces four
+orphan-scan flows.  Keeping all subprocess construction here enforces four
 security invariants that must never be violated:
 
 (a) argv is always list[str] — never a single shell string.  User-influenceable
@@ -37,7 +37,7 @@ if TYPE_CHECKING:
 
 @runtime_checkable
 class Runner(Protocol):
-    """Protocol for the single subprocess seam used throughout compose-orphans.
+    """Protocol for the single subprocess seam used throughout orphan-scan.
 
     All callers that need to run an external command accept a Runner so that
     tests can inject a fake without monkeypatching subprocess.run globally.
