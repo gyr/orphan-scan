@@ -27,6 +27,7 @@ _log = logging.getLogger(__name__)
 
 _SLFO_GIT_URL = "ssh://gitea@src.suse.de/products/SLFO.git"
 _MAINTAINERSHIP_FILE = "_maintainership.json"
+PACKAGES_KEY = "packages"
 
 
 def _build_archive_argv(ref: str) -> list[str]:
@@ -135,10 +136,10 @@ def fetch_maintainership(
     except json.JSONDecodeError as e:
         raise PipelineError(_INVALID_JSON, f"JSON parse error: {e}") from e
 
-    if not isinstance(parsed, dict) or "packages" not in parsed:
+    if not isinstance(parsed, dict) or PACKAGES_KEY not in parsed:
         raise PipelineError(
             _INVALID_JSON,
-            f"expected dict with 'packages' key, got {type(parsed).__name__!r}",
+            f"expected dict with {PACKAGES_KEY!r} key, got {type(parsed).__name__!r}",
         )
 
     return parsed

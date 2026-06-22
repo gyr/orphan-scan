@@ -8,6 +8,8 @@ import sys
 import time
 from typing import Literal
 
+_TS_FMT = "%Y-%m-%dT%H:%M:%SZ"
+
 
 class TextFormatter(logging.Formatter):
     """Formats log records as ``<ts> [LEVEL] <msg>`` on a single line.
@@ -16,7 +18,7 @@ class TextFormatter(logging.Formatter):
     """
 
     def format(self, record: logging.LogRecord) -> str:
-        ts = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(record.created))
+        ts = time.strftime(_TS_FMT, time.gmtime(record.created))
         msg = record.getMessage()
         formatted = f"{ts} [{record.levelname}] {msg}"
         if record.exc_info:
@@ -41,7 +43,7 @@ class JsonFormatter(logging.Formatter):
     """
 
     def format(self, record: logging.LogRecord) -> str:
-        ts = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(record.created))
+        ts = time.strftime(_TS_FMT, time.gmtime(record.created))
         obj: dict[str, str] = {
             "ts": ts,
             "level": record.levelname,

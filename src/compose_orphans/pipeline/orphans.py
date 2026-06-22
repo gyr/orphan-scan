@@ -4,9 +4,11 @@ from __future__ import annotations
 
 from typing import Any
 
+from compose_orphans.pipeline.maintainership import PACKAGES_KEY
+
 
 def _is_orphan(db: dict[str, Any], pkg: str) -> bool:
-    entry = db.get("packages", {}).get(pkg)
+    entry = db.get(PACKAGES_KEY, {}).get(pkg)
     if not entry:  # missing, None, or empty dict
         return True
     users = entry.get("users") or []  # None-or-missing → []

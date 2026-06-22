@@ -13,7 +13,11 @@ if TYPE_CHECKING:
 
 from compose_orphans.config import Config
 from compose_orphans.exceptions import PipelineError, PipelineErrorReason
-from compose_orphans.pipeline.sources import _build_bulk_map, resolve_sources
+from compose_orphans.pipeline.sources import (
+    _OBS_API_URL,
+    _build_bulk_map,
+    resolve_sources,
+)
 
 # ---------------------------------------------------------------------------
 # Minimal XML fixtures
@@ -38,7 +42,7 @@ _DEFAULT_PROJECT = "SUSE:SLFO:Main"
 _OSC_BULK_ARGV = (
     "osc",
     "-A",
-    "https://api.suse.de",
+    _OBS_API_URL,
     "api",
     f"/source/{_DEFAULT_PROJECT}?view=info&parse=1",
 )
@@ -241,7 +245,7 @@ def test_resolve_sources_forwards_timeout_to_runner() -> None:
     bulk_argv = (
         "osc",
         "-A",
-        "https://api.suse.de",
+        _OBS_API_URL,
         "api",
         f"/source/{cfg.project}?view=info&parse=1",
     )

@@ -8,7 +8,7 @@ from typing import Callable
 
 from compose_orphans.config import Config
 from compose_orphans.pipeline.diff import extract_added_binaries
-from compose_orphans.pipeline.maintainership import fetch_maintainership
+from compose_orphans.pipeline.maintainership import PACKAGES_KEY, fetch_maintainership
 from compose_orphans.pipeline.orphans import find_orphans
 from compose_orphans.pipeline.sources import resolve_sources
 from compose_orphans.report import OrphanReport
@@ -136,7 +136,7 @@ def check_orphans(
     _log.debug(
         "maintainership stage: done in %.3fs — %d entries",
         _elapsed_maint,
-        len(maintainership.get("packages", {})),
+        len(maintainership.get(PACKAGES_KEY, {})),
     )
 
     _log.debug("orphans stage: starting — %d sources", len(sources))

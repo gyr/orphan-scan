@@ -17,6 +17,9 @@ if TYPE_CHECKING:
     from compose_orphans.runner import Runner
 
 _MAX_BYTES = 50 * 1024 * 1024  # 50 MB hard cap before ElementTree parse
+_DOCTYPE_SCAN_BYTES = 512  # DOCTYPE precedes root element; this window is sufficient
+_DOCTYPE_SENTINEL = b"<!DOCTYPE"
+_OBS_API_URL = "https://api.suse.de"
 
 
 def _build_bulk_map(xml_bytes: bytes) -> dict[str, str]:
@@ -40,7 +43,7 @@ def _build_bulk_map(xml_bytes: bytes) -> dict[str, str]:
     # Check first 512 bytes uppercased: DOCTYPE must precede the root element,
     # so this window is always sufficient. Case-fold catches <!doctype (not valid
     # XML, but ET's ParseError fires anyway — this guard is defense-in-depth).
-    if b"<!DOCTYPE" in xml_bytes[:512].upper():
+    if _DOCTYPE_SENTINEL in xml_bytes[:_DOCTYPE_SCAN_BYTES].upper():
         raise PipelineError(
             PipelineErrorReason.SOURCE_RESOLUTION_EXHAUSTED,
             "DOCTYPE declaration rejected (XXE defense)",
@@ -89,7 +92,7 @@ def resolve_sources(
     argv = [
         "osc",
         "-A",
-        "https://api.suse.de",
+        _OBS_API_URL,
         "api",
         f"/source/{config.project}?view=info&parse=1",
     ]
