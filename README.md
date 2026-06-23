@@ -10,7 +10,14 @@ Python implementation. Distribution name: `orphan-scan`, import name: `orphan_sc
 
 - Python 3.9+
 - [uv](https://docs.astral.sh/uv/) (recommended) or pip
-- `osc` and `git` on PATH (runtime dependencies for OBS/git operations)
+- `git` on PATH — required for all stages (diff: `git log`/`git show`;
+  maintainership: `git archive`). No minimum version for standard operation.
+  Version 2.19+ required only when `--partial-clone` is enabled (`--filter=blob:none`
+  was introduced in 2.19).
+- `osc` on PATH — required for OBS source resolution (sources stage). Any version
+  that supports `osc list -b <project>` is sufficient; no minimum version is
+  known. Install via your distribution's package manager (`zypper install osc`
+  on openSUSE/SLES).
 
 ## Installation
 
