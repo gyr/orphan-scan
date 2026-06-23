@@ -1,54 +1,193 @@
-# bot.sh — SLES orphan-package detector
+# orphan-scan — SLES orphan-package detector
 
 Detects source packages newly added to the SLES product compose that have no
 maintainer registered in the SLFO maintainership database. Designed to run as a
-CI gate and exit non-zero whenever orphans are found, so the build system can
-block the merge.
+CI gate and exit non-zero whenever orphans are found.
+
+Python implementation. Distribution name: `orphan-scan`, import name: `orphan_scan`. For the original shell script see [README-bot.md](README-bot.md).
+
+## Requirements
+
+- Python 3.9+
+- [uv](https://docs.astral.sh/uv/) (recommended) or pip
+- `git` on PATH — required for all stages (diff: `git log`/`git show`;
+  maintainership: `git archive`). No minimum version for standard operation.
+  Version 2.19+ required only when `--partial-clone` is enabled (`--filter=blob:none`
+  was introduced in 2.19).
+- `osc` on PATH — required for OBS source resolution (sources stage). Any version
+  that supports `osc list -b <project>` is sufficient; no minimum version is
+  known. Install via your distribution's package manager (`zypper install osc`
+  on openSUSE/SLES).
 
 ## Installation
 
-```sh
-# Copy to a directory on PATH
-make install          # installs to /usr/local/bin/bot (requires PREFIX override for local installs)
-make PREFIX=~/.local install
+### CLI use (command available on PATH)
 
-# Or run directly from the checkout
-./bot.sh [OPTIONS]
+Use `uv tool install` when you want the `orphan-scan` command available
+globally without it affecting any project virtual environment. This is the
+equivalent of `pipx install` and is the recommended method for shell-only use.
+
+```sh
+# From GitHub
+uv tool install "git+https://github.com/OWNER/REPO.git"
+
+# From GitLab
+uv tool install "git+https://gitlab.com/OWNER/REPO.git"
 ```
+
+> `uv tool install` places `orphan-scan` on your PATH inside an isolated
+> environment managed by uv. The package is **not importable** as a Python
+> library from this install. For library use, see the next section.
+
+### Library use (or CLI inside a venv)
+
+Use `uv pip install` or `pip install` when you need to `import orphan_scan`
+in a Python script or CI pipeline, or when you want the CLI available inside a
+specific virtual environment rather than globally.
+
+```sh
+# With uv (recommended)
+uv pip install "git+https://github.com/OWNER/REPO.git"   # GitHub
+uv pip install "git+https://gitlab.com/OWNER/REPO.git"   # GitLab
+
+# With pip (if uv is not available)
+pip install "git+https://github.com/OWNER/REPO.git"
+pip install "git+https://gitlab.com/OWNER/REPO.git"
+```
+
+### Contributors (clone + develop)
+
+```sh
+git clone https://github.com/OWNER/REPO.git   # or the GitLab URL
+cd REPO          # directory name matches the repository name in the URL
+
+# Recommended — installs from uv.lock, all contributors get identical deps
+uv sync --extra dev
+
+# Fallback — editable install with pip, no lockfile enforcement
+pip install -e ".[dev]"
+```
+
+> **Why `uv sync` over `pip install -e`:** `uv sync` installs from `uv.lock`,
+> ensuring identical dependency versions across every contributor's machine and
+> CI. If you do not have uv, see
+> [uv installation](https://docs.astral.sh/uv/getting-started/installation/).
 
 ## Usage
 
-### From inside an SLES checkout
+### CLI
 
 ```sh
-./bot.sh
+orphan-scan                          # detect orphans using defaults
+orphan-scan --project SUSE:SLFO:Main
+orphan-scan --output json            # machine-readable output
+orphan-scan --quiet --output json > orphans.json   # CI usage
 ```
 
-### From anywhere (auto-clones SLES)
+### Library
 
-```sh
-./bot.sh                    # clones SLES into a temp dir, cleans up on exit
+CI gate — call `check_orphans`, handle errors, inspect `failed_binaries`:
+
+```python
+import sys
+from orphan_scan import check_orphans, Config, NetworkTimeout, PipelineError
+
+config = Config(
+    project="SUSE:SLFO:Main",
+    branch="16.1",          # pin branch for deterministic results across CI runs
+)
+
+try:
+    report = check_orphans(config)
+except NetworkTimeout as exc:
+    print(f"network timeout: {exc}", file=sys.stderr)
+    sys.exit(124)
+except PipelineError as exc:
+    print(f"pipeline error: {exc}", file=sys.stderr)
+    sys.exit(1)
+
+if report.failed_binaries:
+    # OBS source resolution failed for these binaries — excluded from the orphan
+    # check. Treat as a warning or hard error depending on your CI policy.
+    print(f"unresolved: {report.failed_binaries}", file=sys.stderr)
+
+if not report.is_clean():
+    for pkg in report.orphans:
+        print(pkg)
+    sys.exit(2)
+
+sys.exit(0)
 ```
 
-### In CI — quiet, machine-readable
+`Config()` with no arguments reads all settings from environment variables. Constructor arguments override the corresponding env var. See the [CLI reference](#cli-reference) for the full list of env vars and defaults.
 
-```sh
-./bot.sh --quiet --output json > orphans.json
+> **Early exit:** when `binaries_provider` returns an empty list, the pipeline
+> short-circuits — `sources_resolver` and `maintainership_provider` are NOT
+> invoked. Their outputs on an empty input are mathematically determined
+> (`([], [])` and `{"packages": {}}` respectively), and skipping them avoids
+> wasted OBS / git-archive network calls.
+
+> **Branch override:** `Config.branch` (default `None`) is optional. When unset,
+> the local probe uses the currently-checked-out HEAD and the clone fallback
+> pulls `origin/HEAD`. Set `branch="16.1"` (or the relevant ref name) when you
+> need deterministic results across multi-branch repos like SLES.
+
+> **Maintainership ref override:** `Config.maintainership_ref` (default
+> `"slfo-main"`) selects the git ref used by the SLFO `git archive` call.
+> Override only when you need to test against a topic branch of the
+> maintainership database — the default is correct for production use.
+
+> **Partial clone (experimental):** `Config.partial_clone` (default `False`)
+> enables `git clone --filter=blob:none` in the clone fallback, deferring
+> blob fetches until needed. Verified prerequisites: `git show <sha>`
+> triggers on-demand blob fetch in such a clone. Unverified: gitea
+> `uploadpack.allowFilter=true` and git client ≥ 2.19 on your build hosts.
+> Test against your environment before relying on the default.
+
+> **Note:** `runner` is not forwarded to the maintainership stage — that stage requires
+> a binary-output subprocess protocol internally. To stub maintainership, supply
+> `maintainership_provider` directly.
+
+#### Stub seams for testing
+
+All pipeline stages accept injectable providers to avoid real subprocess calls in tests:
+
+```python
+from orphan_scan import check_orphans, Config
+
+report = check_orphans(
+    Config(project="SUSE:SLFO:Main"),
+    runner=my_runner,
+    binaries_provider=my_binaries_fn,
+    sources_resolver=my_sources_fn,
+    maintainership_provider=my_maintainership_fn,
+)
 ```
+
+| Parameter | Signature | Description |
+|---|---|---|
+| `runner` | `(argv, *, timeout, cwd) → CompletedProcess[str]` | Subprocess seam forwarded to the binaries and sources stages. Defaults to the real subprocess runner. |
+| `binaries_provider` | `(Config, Runner) → list[str]` | Extracts the names of newly-added binary packages. |
+| `sources_resolver` | `(list[str], Config, Runner) → tuple[list[str], list[str]]` | Maps binary names to source package names via OBS. Returns `(resolved, failed)`. |
+| `maintainership_provider` | `(Config, Runner) → dict` | Fetches the SLFO maintainership database. |
 
 ## CLI reference
 
-| Flag | Short | Env var | Default | Description |
-|---|---|---|---|---|
-| `--help` | `-h` | — | — | Show usage and exit 0 |
-| `--version` | `-V` | — | — | Print version and exit 0 |
-| `--quiet` | `-q` | — | off | Suppress INFO logs |
-| `--verbose` | `-v` | — | off | Enable DEBUG logs |
-| `--project NAME` | | `BOT_PROJECT` | `SUSE:SLFO:Main` | IBS build project |
-| `--file PATH` | | `BOT_FILE` | `000productcompose/default.productcompose` | productcompose path |
-| `--output FORMAT` | | `BOT_OUTPUT` | `text` | `text` or `json` |
-| `--timeout SECS` | | `BOT_TIMEOUT` | `30` | Network timeout per attempt |
-| `--retries N` | | `BOT_RETRIES` | `3` | Retry count for network calls |
+| Flag | Env var | Default | Description |
+|---|---|---|---|
+| `--help` | — | — | Show usage and exit 0 |
+| `--version` | — | — | Print version and exit 0 |
+| `--quiet` | — | off | Suppress INFO logs (WARNING and above only) |
+| `--verbose` | — | off | Enable DEBUG logs and per-stage timings |
+| `--project NAME` | `ORPHAN_SCAN_PROJECT` | `SUSE:SLFO:Main` | OBS build project |
+| `--file PATH` | `ORPHAN_SCAN_FILE` | `000productcompose/default.productcompose` | productcompose path |
+| `--output FORMAT` | `ORPHAN_SCAN_OUTPUT` | `text` | `text` or `json` |
+| `--timeout SECS` | `ORPHAN_SCAN_TIMEOUT` | `30` | Network timeout in seconds |
+| `--branch BRANCH` | `ORPHAN_SCAN_BRANCH` | (none) | Target git branch for probe and clone |
+| `--maintainership-ref REF` | `ORPHAN_SCAN_MAINTAINERSHIP_REF` | `slfo-main` | Git ref for the SLFO maintainership archive |
+| `--partial-clone` | `ORPHAN_SCAN_PARTIAL_CLONE` | off | Use `git --filter=blob:none` in the clone fallback (experimental) |
+| `--log-format FORMAT` | — | `text` | `text` or `json` log formatter |
+| `--strict` | — | off | Exit 2 when failed binaries present, even with no orphans |
 
 Flag value beats env var beats default.
 
@@ -57,54 +196,39 @@ Flag value beats env var beats default.
 | Code | Meaning |
 |---|---|
 | 0 | Clean — no orphans |
-| 1 | Internal error (`set -e` tripped) |
-| 2 | Orphans found |
+| 1 | Internal or pipeline error |
+| 2 | Orphans found (or failed binaries under `--strict`) |
 | 64 | Bad CLI usage (`EX_USAGE`) |
-| 69 | Preflight failed: missing dep or auth (`EX_UNAVAILABLE`) |
-| 124 | Network call timed out after all retries |
+| 124 | Network call timed out |
+| 127 | Required binary not found (`osc`, `git`) |
 
-## CI integration examples
+## Public API
 
-### Gitea Actions / GitHub Actions
-
-```yaml
-- name: Check for orphaned packages
-  run: ./bot.sh --quiet --output json > orphans.json
-  # Job fails automatically on exit 2 (orphans) or 69 (preflight)
+```python
+from orphan_scan import (
+    check_orphans,       # orchestrator — main entry point
+    Config,              # runtime configuration dataclass
+    OrphanReport,        # immutable result (orphans, checked, failed_binaries)
+    Runner,              # subprocess protocol — pass a matching callable as runner= to check_orphans
+    BugownerError,       # base exception
+    PipelineError,       # known pipeline failure (reason enum attached)
+    PipelineErrorReason, # enum of failure reasons
+    NetworkTimeout,      # network call exceeded timeout
+)
 ```
-
-### GitLab CI — treat orphans as warning, not blocker
-
-```yaml
-check-orphans:
-  script: ./bot.sh --quiet
-  allow_failure:
-    exit_codes: [2]
-```
-
-### Plain cron / Jenkins
-
-```sh
-make check   # lint + tests
-./bot.sh --quiet || [ $? -eq 2 ]   # succeed even with orphans, fail on errors
-```
-
-## Configuration
-
-All flags have equivalent environment variables (see CLI reference above).
-Additional env vars:
-
-| Variable | Description |
-|---|---|
-| `BOT_TEST_FIXTURES` | Set to any value to enable test fixtures (injects fake binaries/sources). Also skips preflight. |
-| `BOT_FORCE_PREFLIGHT` | Set to `1` to run preflight even when `BOT_TEST_FIXTURES` is set. |
 
 ## Development
 
 ```sh
-make lint    # shellcheck -x bot.sh
-make test    # bats tests/
-make check   # lint + tests (CI entry point)
+uv sync --extra dev          # install all dev dependencies
+
+uv run pytest tests/python/              # run test suite
+uv run pytest tests/python/ --cov        # tests + coverage report
+
+uv run ruff format src/ tests/python/   # auto-format
+uv run ruff check src/ tests/python/    # lint
+uv run mypy src/                         # type check
+uv run bandit -c .bandit -r src/ -q      # security scan
 ```
 
-Tests use PATH-shim mocks for `osc`, `git`, and `jq` — no real network calls.
+All tool configuration lives in `pyproject.toml`.

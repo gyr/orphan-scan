@@ -1,0 +1,12 @@
+{
+  "packages": {
+    "pkg_null": null,
+    "pkg_empty_dict": {},
+    "pkg_null_fields": {"users": null, "groups": null},
+    "pkg_empty_lists": {"users": [], "groups": []},
+    "pkg_empty_users_no_groups": {"users": []},
+    "pkg_has_users": {"users": ["alice"], "groups": []},
+    "pkg_has_groups": {"users": [], "groups": ["team"]},
+    "pkg_has_both": {"users": ["alice"], "groups": ["team"]}
+  }
+}

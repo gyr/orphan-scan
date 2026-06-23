@@ -1,0 +1,52 @@
+# Tests are fully mocked — no osc or git network access required on CI runners.
+name: ci
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  quality-and-tests:
+    name: quality-and-tests (py${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.9", "3.10", "3.11", "3.12", "3.13"]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Install uv and set up Python ${{ matrix.python-version }}
+        uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39 # v8.2.0
+        with:
+          enable-cache: true
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install dependencies
+        run: uv sync --extra dev
+
+      - name: Lint (ruff check)
+        run: uv run ruff check src/ tests/python/
+
+      - name: Format check (ruff format --check)
+        run: uv run ruff format --check src/ tests/python/
+
+      - name: Type check (mypy)
+        run: uv run mypy src/
+
+      - name: Security scan (bandit)
+        run: uv run bandit -c .bandit -r src/
+
+      - name: Tests with coverage (pytest)
+        run: uv run pytest tests/python/ -v --cov --cov-report=term-missing --cov-report=xml
