@@ -1,0 +1,77 @@
+# Tests are fully mocked — no osc or git network access required on CI runners.
+# Single Python image per GitLab convention (matrix support requires parallel:matrix
+# with explicit image overrides; defer multi-version coverage to GitHub Actions).
+
+default:
+  image: python:3.12
+
+stages:
+  - quality
+  - test
+
+variables:
+  UV_CACHE_DIR: .cache/uv
+  UV_LINK_MODE: copy
+
+cache:
+  key:
+    files:
+      - uv.lock
+  paths:
+    - .cache/uv
+    - .venv
+
+.install_deps: &install_deps
+  before_script:
+    - curl -LsSf https://astral.sh/uv/install.sh | sh
+    - export PATH="$HOME/.local/bin:$PATH"
+    - uv sync --extra dev
+
+.default_rules: &default_rules
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH == "master"
+
+lint:
+  stage: quality
+  <<: *install_deps
+  <<: *default_rules
+  script:
+    - uv run ruff check src/ tests/python/
+
+format:
+  stage: quality
+  <<: *install_deps
+  <<: *default_rules
+  script:
+    - uv run ruff format --check src/ tests/python/
+
+typecheck:
+  stage: quality
+  <<: *install_deps
+  <<: *default_rules
+  script:
+    - uv run mypy src/
+
+security:
+  stage: quality
+  <<: *install_deps
+  <<: *default_rules
+  script:
+    - uv run bandit -c .bandit -r src/ -q
+
+test:
+  stage: test
+  <<: *install_deps
+  <<: *default_rules
+  script:
+    - uv run pytest tests/python/ -v --cov --cov-report=term-missing --cov-report=xml
+  coverage: '/(?i)total.*? (100(?:\.0+)?\%|[1-9]?\d(?:\.\d+)?\%)$/'
+  artifacts:
+    reports:
+      coverage_report:
+        coverage_format: cobertura
+        path: coverage.xml
+    paths:
+      - coverage.xml
+    expire_in: 30 days
