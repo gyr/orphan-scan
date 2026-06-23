@@ -21,13 +21,57 @@ Python implementation. Distribution name: `orphan-scan`, import name: `orphan_sc
 
 ## Installation
 
-```sh
-# Install from source with uv
-uv pip install .
+### CLI use (command available on PATH)
 
-# Or in development mode
-uv sync --extra dev
+Use `uv tool install` when you want the `orphan-scan` command available
+globally without it affecting any project virtual environment. This is the
+equivalent of `pipx install` and is the recommended method for shell-only use.
+
+```sh
+# From GitHub
+uv tool install "git+https://github.com/OWNER/REPO.git"
+
+# From GitLab
+uv tool install "git+https://gitlab.com/OWNER/REPO.git"
 ```
+
+> `uv tool install` places `orphan-scan` on your PATH inside an isolated
+> environment managed by uv. The package is **not importable** as a Python
+> library from this install. For library use, see the next section.
+
+### Library use (or CLI inside a venv)
+
+Use `uv pip install` or `pip install` when you need to `import orphan_scan`
+in a Python script or CI pipeline, or when you want the CLI available inside a
+specific virtual environment rather than globally.
+
+```sh
+# With uv (recommended)
+uv pip install "git+https://github.com/OWNER/REPO.git"   # GitHub
+uv pip install "git+https://gitlab.com/OWNER/REPO.git"   # GitLab
+
+# With pip (if uv is not available)
+pip install "git+https://github.com/OWNER/REPO.git"
+pip install "git+https://gitlab.com/OWNER/REPO.git"
+```
+
+### Contributors (clone + develop)
+
+```sh
+git clone https://github.com/OWNER/REPO.git   # or the GitLab URL
+cd REPO          # directory name matches the repository name in the URL
+
+# Recommended — installs from uv.lock, all contributors get identical deps
+uv sync --extra dev
+
+# Fallback — editable install with pip, no lockfile enforcement
+pip install -e ".[dev]"
+```
+
+> **Why `uv sync` over `pip install -e`:** `uv sync` installs from `uv.lock`,
+> ensuring identical dependency versions across every contributor's machine and
+> CI. If you do not have uv, see
+> [uv installation](https://docs.astral.sh/uv/getting-started/installation/).
 
 ## Usage
 
@@ -184,7 +228,7 @@ uv run pytest tests/python/ --cov        # tests + coverage report
 uv run ruff format src/ tests/python/   # auto-format
 uv run ruff check src/ tests/python/    # lint
 uv run mypy src/                         # type check
-uv run bandit -r src/ -q                 # security scan
+uv run bandit -c .bandit -r src/ -q      # security scan
 ```
 
 All tool configuration lives in `pyproject.toml`.
