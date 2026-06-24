@@ -1,20 +1,13 @@
 """Tests for orphan_scan.network — run_with_timeout wrapper."""
 
-from __future__ import annotations
-
 import subprocess
-from typing import TYPE_CHECKING
+from pathlib import Path
 
 import pytest
 
 from orphan_scan.exceptions import NetworkTimeout
 from orphan_scan.network import run_with_timeout
-
-if TYPE_CHECKING:
-    from pathlib import Path
-
-    from orphan_scan.runner import Runner
-
+from orphan_scan.runner import Runner
 
 # ---------------------------------------------------------------------------
 # Helper — a minimal fake runner that records calls and returns on demand

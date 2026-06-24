@@ -1,13 +1,8 @@
 """OrphanReport dataclass, ReportEmitter protocol, and EMITTERS registry."""
 
-from __future__ import annotations
-
 import json
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Protocol
-
-if TYPE_CHECKING:
-    from typing import TextIO
+from typing import Protocol, TextIO
 
 VALID_OUTPUTS: frozenset[str] = frozenset({"text", "json"})
 

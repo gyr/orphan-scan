@@ -1,7 +1,5 @@
 """Integration tests for the orphan-scan CLI (cli.py / __main__.py)."""
 
-from __future__ import annotations
-
 import json
 
 import pytest

@@ -5,10 +5,10 @@ subprocess calls.  Each test exercises one observable behaviour of the
 orchestrator.
 """
 
-from __future__ import annotations
-
 import logging
-from typing import TYPE_CHECKING, Any
+import subprocess
+from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -20,11 +20,6 @@ from orphan_scan.exceptions import (
 )
 from orphan_scan.pipeline import check_orphans
 from orphan_scan.report import OrphanReport
-
-if TYPE_CHECKING:
-    import subprocess
-    from pathlib import Path
-
 
 # ---------------------------------------------------------------------------
 # Shared fixtures / helpers

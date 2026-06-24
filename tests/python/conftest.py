@@ -3,8 +3,6 @@
 Populated incrementally as each feature module is implemented.
 """
 
-from __future__ import annotations
-
 import io
 import tarfile
 

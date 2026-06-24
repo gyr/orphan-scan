@@ -3,25 +3,19 @@
 Fetches _maintainership.json via git archive into an in-memory tar and parses the JSON.
 """
 
-from __future__ import annotations
-
 import io
 import json
 import logging
 import subprocess  # nosec B404 - imported for TimeoutExpired only; no command construction here
 import tarfile
-from typing import TYPE_CHECKING
 
+from orphan_scan.config import Config
 from orphan_scan.exceptions import (
     NetworkTimeout,
     PipelineError,
     PipelineErrorReason,
 )
-from orphan_scan.runner import default_binary_runner
-
-if TYPE_CHECKING:
-    from orphan_scan.config import Config
-    from orphan_scan.runner import BinaryRunner
+from orphan_scan.runner import BinaryRunner, default_binary_runner
 
 _log = logging.getLogger(__name__)
 

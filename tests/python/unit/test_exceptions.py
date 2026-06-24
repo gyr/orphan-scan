@@ -1,7 +1,5 @@
 """Tests for orphan_scan.exceptions — exception hierarchy."""
 
-from __future__ import annotations
-
 import pytest
 
 from orphan_scan.exceptions import (

@@ -1,7 +1,5 @@
 """Pipeline stage: find_orphans — pure-Python maintainership dict lookup."""
 
-from __future__ import annotations
-
 from typing import Any
 
 from orphan_scan.pipeline.maintainership import PACKAGES_KEY

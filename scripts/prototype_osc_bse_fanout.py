@@ -20,8 +20,6 @@ Usage:
     python scripts/prototype_osc_bse_fanout.py --refresh-bulk --sample test.patch
 """
 
-from __future__ import annotations
-
 import argparse
 import math
 import re

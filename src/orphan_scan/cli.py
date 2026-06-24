@@ -1,7 +1,5 @@
 """CLI entry point: argument parsing and exit-code mapping."""
 
-from __future__ import annotations
-
 import argparse
 import logging
 import sys

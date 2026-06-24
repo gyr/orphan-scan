@@ -1,7 +1,5 @@
 """Tests for orphan_scan.pipeline.orphans — find_orphans."""
 
-from __future__ import annotations
-
 from orphan_scan.pipeline.orphans import find_orphans
 
 # ---------------------------------------------------------------------------

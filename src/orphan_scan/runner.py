@@ -26,13 +26,9 @@ security invariants that must never be violated:
     allowlist rather than relying on this default.
 """
 
-from __future__ import annotations
-
 import subprocess  # nosec B404 - subprocess is required for external tool invocation (osc, ssh, git)
-from typing import TYPE_CHECKING, Protocol, runtime_checkable
-
-if TYPE_CHECKING:
-    from pathlib import Path
+from pathlib import Path
+from typing import Protocol, runtime_checkable
 
 
 @runtime_checkable

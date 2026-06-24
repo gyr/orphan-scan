@@ -1,7 +1,5 @@
 """orphan-scan — detect orphan source packages in the SLES product compose."""
 
-from __future__ import annotations
-
 from orphan_scan.config import Config
 from orphan_scan.exceptions import (
     BugownerError,

@@ -1,14 +1,9 @@
 """run_with_timeout: single-shot subprocess wrapper; raises NetworkTimeout."""
 
-from __future__ import annotations
-
 import subprocess  # nosec B404 - imported for subprocess.TimeoutExpired; no command construction here
-from typing import TYPE_CHECKING
 
 from orphan_scan.exceptions import NetworkTimeout
-
-if TYPE_CHECKING:
-    from orphan_scan.runner import Runner
+from orphan_scan.runner import Runner
 
 
 def run_with_timeout(

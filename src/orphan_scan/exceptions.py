@@ -1,20 +1,19 @@
 """Exception hierarchy for orphan-scan: network, pipeline."""
 
-from __future__ import annotations
-
-from enum import Enum
+from enum import StrEnum
 
 
 class BugownerError(Exception):
     """Base exception for all orphan-scan errors."""
 
 
-class PipelineErrorReason(Enum):
+class PipelineErrorReason(StrEnum):
     """Discriminator enum for :class:`PipelineError`.
 
     Each member identifies a specific pipeline failure category.  The string
     value is stable across releases and appears in machine-readable output
-    (e.g. JSON reports) via ``reason.value``.
+    (e.g. JSON reports); members are ``str`` instances so ``reason.value``
+    and ``str(reason)`` both return the snake_case tag directly.
     """
 
     NO_PRODUCTCOMPOSE_HISTORY = "no_productcompose_history"

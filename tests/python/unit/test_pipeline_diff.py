@@ -1,7 +1,5 @@
 """Tests for orphan_scan.pipeline.diff — extract_added_binaries."""
 
-from __future__ import annotations
-
 import logging
 import subprocess
 from pathlib import Path

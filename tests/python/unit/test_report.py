@@ -1,7 +1,5 @@
 """Tests for orphan_scan.report — OrphanReport, emitters, and EMITTERS registry."""
 
-from __future__ import annotations
-
 import io
 import json
 from dataclasses import FrozenInstanceError

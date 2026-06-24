@@ -8,7 +8,7 @@ Python implementation. Distribution name: `orphan-scan`, import name: `orphan_sc
 
 ## Requirements
 
-- Python 3.9+
+- Python 3.11+
 - [uv](https://docs.astral.sh/uv/) (recommended) or pip
 - `git` on PATH — required for all stages (diff: `git log`/`git show`;
   maintainership: `git archive`). No minimum version for standard operation.

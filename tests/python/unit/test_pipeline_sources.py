@@ -1,15 +1,10 @@
 """Tests for orphan_scan.pipeline.sources — resolve_sources and _build_bulk_map."""
 
-from __future__ import annotations
-
 import subprocess
 import xml.etree.ElementTree as ET
-from typing import TYPE_CHECKING
+from pathlib import Path
 
 import pytest
-
-if TYPE_CHECKING:
-    from pathlib import Path
 
 from orphan_scan.config import Config
 from orphan_scan.exceptions import PipelineError, PipelineErrorReason

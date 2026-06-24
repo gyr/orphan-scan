@@ -1,12 +1,10 @@
 """Config dataclass: frozen, runtime-validated, env-var loading."""
 
-from __future__ import annotations
-
 import os
 import re
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Literal
+from typing import Literal, Self
 
 from orphan_scan.report import VALID_OUTPUTS
 
@@ -80,7 +78,7 @@ class Config:
             )
 
     @classmethod
-    def from_env(cls, **overrides: object) -> Config:
+    def from_env(cls, **overrides: object) -> Self:
         """Build a Config from environment variables, with caller overrides winning.
 
         Reads:

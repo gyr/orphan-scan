@@ -1,10 +1,8 @@
 """Pipeline orchestrator: check_orphans entry point and stage re-exports."""
 
-from __future__ import annotations
-
 import logging
 import time
-from typing import Callable
+from collections.abc import Callable
 
 from orphan_scan.config import Config
 from orphan_scan.pipeline.diff import extract_added_binaries

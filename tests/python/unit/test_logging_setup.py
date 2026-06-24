@@ -1,7 +1,5 @@
 """Tests for TextFormatter and JsonFormatter in logging_setup."""
 
-from __future__ import annotations
-
 import json
 import logging
 import re

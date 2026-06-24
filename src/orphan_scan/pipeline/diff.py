@@ -1,19 +1,14 @@
 """Pipeline stage: extract_added_binaries (git + regex)."""
 
-from __future__ import annotations
-
 import logging
 import re
 import tempfile
 from contextlib import nullcontext
 from pathlib import Path
-from typing import TYPE_CHECKING
 
+from orphan_scan.config import Config
 from orphan_scan.exceptions import PipelineError, PipelineErrorReason
-
-if TYPE_CHECKING:
-    from orphan_scan.config import Config
-    from orphan_scan.runner import Runner
+from orphan_scan.runner import Runner
 
 DEFAULT_PRODUCTCOMPOSE = Path("000productcompose/default.productcompose")
 _SLES_GIT_URL = "gitea@src.suse.de:products/SLES.git"

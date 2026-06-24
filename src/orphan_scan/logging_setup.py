@@ -1,7 +1,5 @@
 """Logging formatters and setup_logging factory for orphan-scan."""
 
-from __future__ import annotations
-
 import json
 import logging
 import sys

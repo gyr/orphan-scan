@@ -1,13 +1,11 @@
 """Tests for orphan_scan.pipeline.maintainership — fetch_maintainership."""
 
-from __future__ import annotations
-
 import io
 import json
 import logging
 import subprocess
 import tarfile
-from typing import TYPE_CHECKING
+from pathlib import Path
 
 import pytest
 
@@ -16,9 +14,6 @@ from orphan_scan.exceptions import (
     PipelineError,
     PipelineErrorReason,
 )
-
-if TYPE_CHECKING:
-    from pathlib import Path
 
 MAINTAINERSHIP_FETCH_FAILED = PipelineErrorReason.MAINTAINERSHIP_FETCH_FAILED
 MAINTAINERSHIP_INVALID_JSON = PipelineErrorReason.MAINTAINERSHIP_INVALID_JSON
@@ -97,8 +92,8 @@ def test_binary_runner_protocol_in_runner_module() -> None:
     """BinaryRunner from orphan_scan.runner is runtime_checkable."""
     from orphan_scan.runner import BinaryRunner
 
-    # Annotations are strings at runtime (from __future__ import annotations), so
-    # Path does not need to be imported here — @runtime_checkable only checks __call__.
+    # @runtime_checkable checks only for __call__ existence, not signature shape.
+    # Path does not need to be imported here.
     def conforming(
         argv: list[str],
         *,

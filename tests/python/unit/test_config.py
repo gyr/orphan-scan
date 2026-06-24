@@ -1,7 +1,5 @@
 """Tests for Config dataclass: defaults, immutability, validation, env-var loading."""
 
-from __future__ import annotations
-
 from dataclasses import FrozenInstanceError
 from pathlib import Path
 
