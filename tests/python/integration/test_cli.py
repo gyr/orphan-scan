@@ -1,6 +1,7 @@
 """Integration tests for the orphan-scan CLI (cli.py / __main__.py)."""
 
 import json
+import re
 
 import pytest
 
@@ -61,6 +62,12 @@ def test_version_exits_zero_and_prints_version(
     assert exc_info.value.code == 0
     captured = capsys.readouterr()
     assert "orphan-scan" in captured.out.lower()
+    parts = captured.out.strip().split("orphan-scan ", 1)
+    assert len(parts) == 2, (
+        f"expected 'orphan-scan <version>' in output, got: {captured.out!r}"
+    )
+    token = parts[1].strip()
+    assert re.match(r"^\d+\.\d+", token), f"unexpected version token: {token!r}"
 
 
 # ---------------------------------------------------------------------------
