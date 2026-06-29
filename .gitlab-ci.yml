@@ -12,6 +12,7 @@ stages:
 variables:
   UV_CACHE_DIR: .cache/uv
   UV_LINK_MODE: copy
+  GIT_DEPTH: 0
 
 cache:
   key:
