@@ -1,6 +1,6 @@
 [project]
 name = "orphan-scan"
-version = "0.1.0"
+dynamic = ["version"]
 description = "Find orphan packages in the productcompose"
 readme = "README.md"
 license = {text = "Apache-2.0"}
@@ -26,14 +26,16 @@ orphan-scan = "orphan_scan.cli:main"
 dev = ["pytest>=7", "pytest-cov", "ruff", "mypy", "bandit>=1.7"]
 
 [build-system]
-requires = ["setuptools>=67"]
-build-backend = "setuptools.build_meta"
+requires = ["hatchling", "hatch-vcs"]
+build-backend = "hatchling.build"
 
-[tool.setuptools.packages.find]
-where = ["src"]
+[tool.hatch.version]
+source = "vcs"
+fallback-version = "0.0.0"
 
-[tool.setuptools.package-data]
-"orphan_scan" = ["py.typed"]
+[tool.hatch.build.targets.wheel]
+packages = ["src/orphan_scan"]
+exclude = ["*,cover"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests/python"]
